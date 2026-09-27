@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 /* ---------- currency preference ---------- */
 
 export const CURRENCIES = [
-  { code: 'MAD', ar: 'د.م.', en: 'MAD' },
+  { code: 'ILS', ar: '₪', en: 'ILS' },
   { code: 'USD', ar: '$', en: '$' },
   { code: 'EUR', ar: '€', en: '€' },
   { code: 'GBP', ar: '£', en: '£' },
@@ -16,9 +16,21 @@ export const CURRENCIES = [
 
 const CURRENCY_KEY = 'bb.currency';
 const CURRENCY_EVENT = 'bb:currency';
+const DEFAULT_CURRENCY = 'ILS';
+
+/**
+ * A browser can still hold a code that has since been dropped from
+ * CURRENCIES (the setting lives in localStorage, so it outlives the code).
+ * Without this guard the app would print the raw code as the symbol, e.g.
+ * "350 MAD" after the dirham was removed.
+ */
+function readStoredCurrency() {
+  const stored = localStorage.getItem(CURRENCY_KEY);
+  return CURRENCIES.some((c) => c.code === stored) ? stored : DEFAULT_CURRENCY;
+}
 
 export function useCurrency() {
-  const [code, setCodeState] = useState(() => localStorage.getItem(CURRENCY_KEY) || 'MAD');
+  const [code, setCodeState] = useState(readStoredCurrency);
 
   const setCode = useCallback((next) => {
     localStorage.setItem(CURRENCY_KEY, next);
@@ -27,7 +39,7 @@ export function useCurrency() {
   }, []);
 
   useEffect(() => {
-    const sync = () => setCodeState(localStorage.getItem(CURRENCY_KEY) || 'MAD');
+    const sync = () => setCodeState(readStoredCurrency());
     window.addEventListener(CURRENCY_EVENT, sync);
     window.addEventListener('storage', sync);
     return () => {
