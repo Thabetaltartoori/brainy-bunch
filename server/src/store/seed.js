@@ -248,8 +248,8 @@ export function buildSeed() {
       },
       {
         id: uid(),
-        body_ar: 'آخر موعد لتسديد رسوم شهر نوفمبر هو اليوم 15 من الشهر',
-        body_en: 'November tuition is due by the 15th of the month',
+        body_ar: 'آخر موعد لتسديد الرسوم هو اليوم 15 من كل شهر',
+        body_en: 'Tuition is due by the 15th of every month',
         tone: 'red',
         is_active: true,
         sort_order: 2,
