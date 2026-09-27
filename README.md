@@ -125,7 +125,7 @@ A teacher who is not assigned to a student gets `403` — verified in the test s
 ## 📁 Structure
 
 ```
-brainy-bunch/
+الروضة/            <- this folder
 ├── server/
 │   ├── sql/schema.sql          # the 8 tables, run once in Supabase
 │   └── src/
