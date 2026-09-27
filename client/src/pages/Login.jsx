@@ -2,14 +2,8 @@ import { useState } from 'react';
 
 import { useI18n } from '../i18n.jsx';
 import { api } from '../api.js';
-import { Badge, Button, Field } from '../components/ui.jsx';
+import { Button, Field } from '../components/ui.jsx';
 import { IconAlert, IconGlobe, IconLock, IconNote, IconStudents, IconWallet } from '../icons.jsx';
-
-const DEMO = [
-  { role: 'roleAdmin', email: 'admin@brainybunch.school', pass: 'Admin#2026' },
-  { role: 'roleTeacher', email: 'amina@brainybunch.school', pass: 'Teach#2026' },
-  { role: 'roleParent', email: 'parent@brainybunch.school', pass: 'Parent#2026' },
-];
 
 export function Login({ onSignedIn }) {
   const { t, lang, toggleLang } = useI18n();
@@ -135,35 +129,6 @@ export function Login({ onSignedIn }) {
               {busy ? t('signingIn') : t('signIn')}
             </Button>
           </form>
-
-          <div className="auth__demo">
-            <h4>{t('demoTitle')}</h4>
-            {DEMO.map((d) => (
-              <div
-                key={d.email}
-                className="auth__demo-row"
-                onClick={() => {
-                  setEmail(d.email);
-                  setPassword(d.pass);
-                  setError('');
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setEmail(d.email);
-                    setPassword(d.pass);
-                  }
-                }}
-              >
-                <Badge tone={d.role === 'roleParent' ? 'amber' : 'green'}>
-                  {t(d.role)}
-                </Badge>
-                <code>{d.email}</code>
-              </div>
-            ))}
-            <p className="field__hint mt-10">{t('demoHint')}</p>
-          </div>
         </div>
       </div>
     </div>

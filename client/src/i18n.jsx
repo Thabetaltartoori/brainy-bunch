@@ -35,8 +35,6 @@ const STRINGS = {
     artPoint1: 'Parents see their own child only',
     artPoint2: 'Every note tracked by its teacher',
     artPoint3: 'Dues and balances at a glance',
-    demoTitle: 'Demo accounts — click to fill',
-    demoHint: 'The in-memory demo store is running. Add Supabase keys to use real data.',
     badCreds: 'Wrong email or password',
     fieldRequired: 'This field is required',
 
@@ -254,8 +252,6 @@ const STRINGS = {
     artPoint1: 'كل ولي أمر يرى ابنه فقط',
     artPoint2: 'كل توصية موثقة باسم معلمها',
     artPoint3: 'المستحقات والرصيد أمامك مباشرة',
-    demoTitle: 'حسابات تجريبية — اضغط للتعبئة',
-    demoHint: 'قاعدة البيانات التجريبية تعمل الآن. أضف مفاتيح Supabase لاستخدام بيانات حقيقية.',
     badCreds: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
     fieldRequired: 'هذا الحقل مطلوب',
 

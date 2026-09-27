@@ -1627,7 +1627,7 @@ html[dir='rtl'] .auth {
   height: 400px;
   background: var(--g-500);
   top: -110px;
-  inset-inline-end: -90px;
+  right: -90px;
   animation: float 12s ease-in-out infinite;
 }
 
@@ -1636,7 +1636,7 @@ html[dir='rtl'] .auth {
   height: 330px;
   background: var(--r-500);
   bottom: -110px;
-  inset-inline-start: -80px;
+  left: -80px;
   opacity: 0.24;
   animation: float 15s ease-in-out infinite reverse;
 }
@@ -1754,45 +1754,6 @@ html[dir='rtl'] .auth__headline {
   font-weight: 500;
   margin-bottom: 16px;
   animation: shake 420ms var(--ease-soft);
-}
-
-.auth__demo {
-  margin-top: 24px;
-  padding: 15px;
-  border-radius: var(--r-md);
-  background: var(--g-50);
-  border: 1px dashed var(--g-300);
-  font-size: 12.4px;
-}
-
-.auth__demo h4 {
-  font-size: 11.4px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--g-700);
-  margin-bottom: 9px;
-}
-
-.auth__demo-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-top: 1px solid var(--g-100);
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background var(--fast);
-}
-
-.auth__demo-row:hover {
-  background: var(--g-100);
-}
-
-.auth__demo-row code {
-  font-size: 11.6px;
-  color: var(--muted);
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  direction: ltr;
 }
 
 .auth__lang {
