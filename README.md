@@ -81,13 +81,13 @@ server restarts.**
 The default in-memory store is only for preview. For data that survives restarts:
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor → New query**, paste in [`server/sql/schema.sql`](server/sql/schema.sql) and run it. This creates all 8 tables.
-3. Go to **Project Settings → API** and copy the project URL and the `service_role` key.
+2. Open **SQL Editor → New query**, paste in [`server/sql/schema.sql`](server/sql/schema.sql) and run it. This creates all 8 tables and then locks them down with Row Level Security.
+3. Go to **Project Settings → API Keys** and copy the project URL and your **secret** key (`sb_secret_...` on new projects; the long `eyJ...` `service_role` key on older ones). Take the secret key, not the publishable one.
 4. Copy `server/.env.example` to `server/.env` and fill them in:
 
    ```ini
    SUPABASE_URL=https://yourproject.supabase.co
-   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
+   SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
    ```
 
 5. Upload the demo data so the cloud database is not empty:
@@ -182,6 +182,9 @@ A teacher who is not assigned to a student gets `403` — verified in the test s
   which accounts exist.
 - The Supabase `service_role` key is server-only. It is read from `.env` and never bundled
   into the client.
+- Every table has Row Level Security enabled and the `anon` / `authenticated` grants
+  revoked, so the tables are unreachable through the public Data API. The server's secret
+  key carries `BYPASSRLS`; **all** real authorisation lives in `src/access.js`.
 - Notes marked *not shared* are filtered out of every parent-facing response, not just hidden
   in the interface.
 

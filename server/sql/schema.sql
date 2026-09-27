@@ -93,3 +93,45 @@ create table if not exists announcements (
   is_active  boolean not null default true,
   sort_order int not null default 0
 );
+
+-- ============================================================
+--  Lock the data down
+-- ============================================================
+--  Supabase auto-generates a REST endpoint for every table in the public
+--  schema. A table with Row Level Security *off* is readable and writable
+--  by any role holding a grant on it -- including the publishable key,
+--  which is designed to be visible to the public. Without these two blocks
+--  the entire school database is one curl away.
+--
+--  This app never talks to Supabase from the browser. The client is a
+--  plain fetch() against our own Express API, and the server holds a
+--  secret key, which maps to the service_role Postgres role and carries
+--  BYPASSRLS. So RLS costs the app nothing and locks the tables for good.
+--
+--  Two separate layers, because enabling RLS alone leaves the grants in
+--  place: enable RLS *and* revoke the client grants.
+-- ============================================================
+
+alter table profiles        enable row level security;
+alter table sessions        enable row level security;
+alter table students        enable row level security;
+alter table teacher_students enable row level security;
+alter table guardians       enable row level security;
+alter table notes           enable row level security;
+alter table payments        enable row level security;
+alter table announcements   enable row level security;
+
+revoke all on profiles         from anon, authenticated;
+revoke all on sessions         from anon, authenticated;
+revoke all on students         from anon, authenticated;
+revoke all on teacher_students from anon, authenticated;
+revoke all on guardians        from anon, authenticated;
+revoke all on notes            from anon, authenticated;
+revoke all on payments         from anon, authenticated;
+revoke all on announcements    from anon, authenticated;
+
+-- No policies are created on purpose. With RLS enabled and zero policies,
+-- anon and authenticated match no rows -- which is the correct answer here,
+-- because this database is only ever reached through our own API, where
+-- access.js decides what each role may see.
+
