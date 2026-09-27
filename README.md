@@ -90,7 +90,17 @@ The default in-memory store is only for preview. For data that survives restarts
    SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
    ```
 
-5. Restart the server. The startup line confirms which store is live:
+5. Upload the demo data so the cloud database is not empty:
+
+   ```bash
+   cd server && npm run seed:cloud
+   ```
+
+   It inserts the 6 accounts, 6 students, teacher/guardian links, notes, payment
+   history and banner messages. Already-populated tables are left alone; re-run with
+   `npm run seed:cloud -- --force` to wipe and replace them.
+
+6. Restart the server. The startup line confirms which store is live:
 
    ```
    storage : Supabase (Postgres)     <- real data

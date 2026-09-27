@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "seed:cloud": "node src/store/seed-supabase.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
