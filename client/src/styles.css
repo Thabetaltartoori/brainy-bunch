@@ -430,7 +430,9 @@ html[dir='rtl'] .nav__item:hover {
   margin: 0 auto;
 }
 
+/* the title / commands own the bar; the label is squeezed down beside them */
 .topbar__title {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -452,28 +454,32 @@ html[dir='rtl'] .nav__item:hover {
 }
 
 .topbar__actions {
-  margin-inline-start: auto;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 9px;
 }
 
-/* ---- the rotating label ---- */
+/* ---- the rotating label ----
+   Deliberately a small accent: it holds ~18% of the bar and the
+   page title / commands take the remaining ~82%. */
 .ticker {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
-  min-height: 42px;
-  padding: 0 4px 0;
-  margin: 12px auto 0;
-  max-width: 1360px;
-  width: calc(100% - 64px);
+  gap: 9px;
+  flex: 0 0 18%;
+  min-width: 132px;
+  max-width: 260px;
+  height: 38px;
+  padding: 0;
   border-radius: var(--r-full);
   overflow: hidden;
   color: #fff;
   box-shadow: var(--sh-2);
   transition: background var(--base) var(--ease-soft);
+  order: 9;
+  container-type: inline-size;
 }
 
 .ticker--green {
@@ -499,11 +505,11 @@ html[dir='rtl'] .nav__item:hover {
 .ticker__pulse {
   position: relative;
   flex: none;
-  width: 9px;
-  height: 9px;
+  width: 7px;
+  height: 7px;
   border-radius: var(--r-full);
   background: #fff;
-  margin-inline: 14px 4px;
+  margin-inline: 11px 3px;
   box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
   animation: pulse 2.2s var(--ease-soft) infinite;
 }
@@ -517,13 +523,13 @@ html[dir='rtl'] .nav__item:hover {
   position: relative;
   flex: 1;
   min-width: 0;
-  height: 42px;
+  height: 38px;
   display: flex;
   align-items: center;
 }
 
 .ticker__item {
-  font-size: 13.8px;
+  font-size: 12.6px;
   font-weight: 500;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -531,19 +537,18 @@ html[dir='rtl'] .nav__item:hover {
   text-overflow: ellipsis;
   width: 100%;
   animation: tickerIn 620ms var(--ease) both;
-  padding-inline-end: 16px;
 }
 
 .ticker__dots {
   display: flex;
-  gap: 5px;
-  padding-inline: 6px 14px;
+  gap: 4px;
+  padding-inline: 4px 10px;
   flex: none;
 }
 
 .ticker__dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: var(--r-full);
   background: rgba(255, 255, 255, 0.42);
   transition: all var(--base) var(--ease);
@@ -553,8 +558,16 @@ html[dir='rtl'] .nav__item:hover {
 }
 
 .ticker__dot--on {
-  width: 20px;
+  width: 16px;
   background: #fff;
+}
+
+/* the label is small by design \u2014 drop the dots rather than let them
+   squeeze the text once the chip is too narrow for them */
+@container (max-width: 200px) {
+  .ticker__dots {
+    display: none;
+  }
 }
 
 /* =========================================================
@@ -2096,7 +2109,8 @@ html[dir='rtl'] .toast--out {
     padding-inline: 18px;
   }
   .ticker {
-    width: calc(100% - 36px);
+    flex: 0 0 20%;
+    min-width: 118px;
   }
   .auth {
     grid-template-columns: 1fr;
@@ -2128,7 +2142,9 @@ html[dir='rtl'] .toast--out {
     padding-block: 12px;
   }
   .ticker {
-    width: calc(100% - 28px);
+    flex: 1 0 100%;
+    max-width: none;
+    width: auto;
   }
   .stats {
     grid-template-columns: 1fr;

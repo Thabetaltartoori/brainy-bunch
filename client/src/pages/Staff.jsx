@@ -156,7 +156,7 @@ export function Staff({ user, onChanged }) {
                   <th>{t('colRole')}</th>
                   <th>{t('jobTitle')}</th>
                   <th>{t('phone')}</th>
-                  <th>{t('colStatus')}</th>
+                  <th>{t('colUserStatus')}</th>
                   {isAdmin && <th className="table__num" />}
                 </tr>
               </thead>

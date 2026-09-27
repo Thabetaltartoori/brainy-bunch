@@ -250,9 +250,11 @@ export function Shell({ user, stats, announcements, title, subtitle, onSignOut, 
                 {t('langName')}
               </Button>
             </div>
-          </div>
 
-          <Ticker items={tickerItems} />
+            {/* the label sits beside the title, not under it, so it stays
+                a small accent instead of taking over the whole bar */}
+            <Ticker items={tickerItems} />
+          </div>
         </header>
 
         <main className="content">{children}</main>
