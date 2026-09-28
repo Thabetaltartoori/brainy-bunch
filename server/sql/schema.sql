@@ -41,6 +41,15 @@ create table if not exists students (
 );
 create index if not exists students_grade_idx on students (grade);
 
+-- which teachers cover which classes (a teacher may hold several)
+create table if not exists teacher_sections (
+  teacher_id uuid not null references profiles (id) on delete cascade,
+  grade      text not null,
+  section    text not null,
+  primary key (teacher_id, grade, section)
+);
+create index if not exists teacher_sections_class_idx on teacher_sections (grade, section);
+
 -- which teachers are linked to which students (many-to-many)
 create table if not exists teacher_students (
   teacher_id uuid not null references profiles (id) on delete cascade,
@@ -115,6 +124,7 @@ create table if not exists announcements (
 alter table profiles        enable row level security;
 alter table sessions        enable row level security;
 alter table students        enable row level security;
+alter table teacher_sections enable row level security;
 alter table teacher_students enable row level security;
 alter table guardians       enable row level security;
 alter table notes           enable row level security;
@@ -124,6 +134,7 @@ alter table announcements   enable row level security;
 revoke all on profiles         from anon, authenticated;
 revoke all on sessions         from anon, authenticated;
 revoke all on students         from anon, authenticated;
+revoke all on teacher_sections from anon, authenticated;
 revoke all on teacher_students from anon, authenticated;
 revoke all on guardians        from anon, authenticated;
 revoke all on notes            from anon, authenticated;

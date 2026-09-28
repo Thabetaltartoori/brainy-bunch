@@ -35,8 +35,10 @@ export function Staff({ user, onChanged }) {
   const [params, setParams] = useSearchParams();
 
   const [rows, setRows] = useState(null);
+  const [classes, setClasses] = useState([]);
   const [role, setRole] = useState('all');
   const [editing, setEditing] = useState(null);
+  const [editingSections, setEditingSections] = useState([]);
   const [removing, setRemoving] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -56,6 +58,56 @@ export function Staff({ user, onChanged }) {
     load();
   }, [load]);
 
+  /**
+   * The section picker offers only classes that actually exist, derived
+   * from the students themselves rather than a hand-kept list that would
+   * drift out of date.
+   */
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    api
+      .students()
+      .then(({ students }) => {
+        if (cancelled) return;
+        const counts = new Map();
+        for (const s of students) {
+          const key = `${s.grade}|${s.section ?? ''}`;
+          const entry = counts.get(key) ?? { grade: s.grade, section: s.section ?? '', count: 0 };
+          entry.count += 1;
+          counts.set(key, entry);
+        }
+        setClasses(
+          [...counts.values()].sort(
+            (a, b) => a.grade.localeCompare(b.grade) || a.section.localeCompare(b.section),
+          ),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, rows]);
+
+  useEffect(() => {
+    if (!editing?.id || editing.role !== 'teacher' || !isAdmin) {
+      setEditingSections([]);
+      return;
+    }
+    let cancelled = false;
+    api
+      .userSections(editing.id)
+      .then(({ sections }) => {
+        if (!cancelled) setEditingSections(sections.map((s) => ({ grade: s.grade, section: s.section })));
+      })
+      .catch(() => {
+        if (!cancelled) setEditingSections([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [editing?.id, editing?.role, isAdmin]);
+
   useEffect(() => {
     if (params.get('new') && isAdmin) {
       setEditing({ ...EMPTY_USER });
@@ -67,14 +119,25 @@ export function Staff({ user, onChanged }) {
   async function save(values) {
     setBusy(true);
     try {
+      const sections = values.sections ?? [];
+      let userId = values.id;
+
       if (values.id) {
-        const { id, email, ...patch } = values;
+        const { id, email, sections: _s, ...patch } = values;
         // only send a password if a new one was typed
         if (!patch.password) delete patch.password;
         await api.updateUser(id, patch);
       } else {
-        await api.createUser(values);
+        const { sections: _s, ...body } = values;
+        const { user: created } = await api.createUser(body);
+        userId = created.id;
       }
+
+      // Sections only exist for teachers, and only an admin can set them.
+      if (isAdmin && userId && values.role === 'teacher') {
+        await api.setUserSections(userId, sections);
+      }
+
       setEditing(null);
       toast(t('userSaved'));
       await load();
@@ -246,7 +309,15 @@ export function Staff({ user, onChanged }) {
         )}
       </Card>
 
-      <UserForm user={editing} onClose={() => setEditing(null)} onSave={save} busy={busy} />
+      <UserForm
+        user={editing}
+        classes={classes}
+        sections={editingSections}
+        isAdmin={isAdmin}
+        onClose={() => setEditing(null)}
+        onSave={save}
+        busy={busy}
+      />
 
       <Confirm
         open={!!removing}
@@ -261,17 +332,27 @@ export function Staff({ user, onChanged }) {
   );
 }
 
-function UserForm({ user, onClose, onSave, busy }) {
+function UserForm({ user, classes, sections, isAdmin, onClose, onSave, busy }) {
   const { t } = useI18n();
   const [form, setForm] = useState(user ?? EMPTY_USER);
   const [errors, setErrors] = useState({});
+  const [picked, setPicked] = useState([]);
 
   useEffect(() => {
     setForm(user ?? EMPTY_USER);
     setErrors({});
   }, [user]);
 
+  useEffect(() => {
+    setPicked(sections.map((s) => `${s.grade}|${s.section}`));
+  }, [sections]);
+
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const showSections = form.role === 'teacher' && isAdmin;
+  const keyOf = (grade, section) => `${grade}|${section ?? ''}`;
+  const toggle = (key) =>
+    setPicked((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
 
   function submit(e) {
     e.preventDefault();
@@ -297,6 +378,12 @@ function UserForm({ user, onClose, onSave, busy }) {
       job_title: form.job_title?.trim() || '',
       phone: form.phone?.trim() || '',
       is_active: form.is_active !== false,
+      sections: picked
+        .map((key) => {
+          const [grade, section] = key.split('|');
+          return { grade, section };
+        })
+        .filter((s) => s.grade),
     });
   }
 
@@ -348,6 +435,31 @@ function UserForm({ user, onClose, onSave, busy }) {
             />
           </Field>
         </div>
+
+        {showSections && (
+          <Field label={t('sectionsLabel')} hint={t('sectionsHint')}>
+            {classes.length === 0 ? (
+              <p className="field__hint">{t('sectionsNone')}</p>
+            ) : (
+              <div className="check-grid">
+                {classes.map((c) => {
+                  const key = keyOf(c.grade, c.section);
+                  const on = picked.includes(key);
+                  return (
+                    <label key={key} className={`check ${on ? 'check--on' : ''}`}>
+                      <input type="checkbox" checked={on} onChange={() => toggle(key)} />
+                      <span>
+                        {c.grade}
+                        {c.section ? ` · ${c.section}` : ''}
+                        <em>{c.count}</em>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </Field>
+        )}
 
         {!user?.id && (
           <Field label={t('email')} required error={errors.email}>

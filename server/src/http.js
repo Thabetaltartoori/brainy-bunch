@@ -13,6 +13,7 @@ export const unauthorized = (msg = 'Not signed in') => new HttpError(401, msg);
 export const forbidden = (msg = 'You do not have access to this record') => new HttpError(403, msg);
 export const notFound = (msg = 'Not found') => new HttpError(404, msg);
 export const conflict = (msg) => new HttpError(409, msg);
+export const unavailable = (msg, code) => new HttpError(503, msg, code);
 
 /** Wrap an async handler so rejections reach the error middleware. */
 export const route = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);

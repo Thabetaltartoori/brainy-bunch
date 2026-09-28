@@ -154,6 +154,9 @@ export function buildSeed() {
     ],
     sessions: [],
     students,
+    // No teacher holds a section in the demo data, so teacher scope falls
+    // back to the teacher_students links below.
+    teacher_sections: [],
     teacher_students: [
       { teacher_id: t1, student_id: sara.id, subject: 'Mathematics' },
       { teacher_id: t1, student_id: omar.id, subject: 'Mathematics' },

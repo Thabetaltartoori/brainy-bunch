@@ -91,4 +91,6 @@ export const api = {
   createUser: (row) => request('POST', '/api/users', row),
   updateUser: (id, patch) => request('PATCH', `/api/users/${id}`, patch),
   deleteUser: (id) => request('DELETE', `/api/users/${id}`),
+  userSections: (id) => request('GET', `/api/users/${id}/sections`),
+  setUserSections: (id, sections) => request('PUT', `/api/users/${id}/sections`, { sections }),
 };

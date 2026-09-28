@@ -1,8 +1,8 @@
 import { Router } from 'express';
 
 import { hashPassword, newSessionToken, sessionCookie, sessionExpiry } from '../auth.js';
-import { publicUser } from '../access.js';
-import { badRequest, conflict, notFound, requireRole, route, v } from '../http.js';
+import { publicUser, classKey } from '../access.js';
+import { badRequest, conflict, notFound, requireRole, route, unavailable, v } from '../http.js';
 
 const ROLES = ['admin', 'teacher', 'parent'];
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -92,6 +92,55 @@ export function userRoutes(store) {
       if (!(await store.getUserById(req.params.id))) throw notFound('User not found');
       await store.deleteUser(req.params.id);
       res.json({ ok: true });
+    }),
+  );
+
+  r.get(
+    '/:id/sections',
+    requireRole('admin'),
+    route(async (req, res) => {
+      const user = await store.getUserById(req.params.id);
+      if (!user) throw notFound('User not found');
+      res.json({ sections: await store.listTeacherSections(req.params.id) });
+    }),
+  );
+
+  /**
+   * Replace the set of sections a teacher covers. Sent as the whole set
+   * rather than a diff, so the client never has to reason about which rows
+   * already exist.
+   */
+  r.put(
+    '/:id/sections',
+    requireRole('admin'),
+    route(async (req, res) => {
+      const user = await store.getUserById(req.params.id);
+      if (!user) throw notFound('User not found');
+      if (user.role !== 'teacher') throw badRequest('Sections only apply to teachers');
+
+      const incoming = req.body?.sections;
+      if (!Array.isArray(incoming)) throw badRequest('"sections" must be a list');
+      if (incoming.length > 60) throw badRequest('Too many sections');
+
+      const sections = incoming.map((entry) => ({
+        grade: v.str(entry?.grade, 'grade', { max: 40 }),
+        section: v.str(entry?.section, 'section', { max: 40 }),
+      }));
+
+      // The (teacher, grade, section) key is primary, so a duplicate would
+      // fail the insert. Dedupe here to turn that into a harmless no-op,
+      // using the same encoding access.js compares classes with.
+      const unique = new Map(sections.map((s) => [classKey(s.grade, s.section), s]));
+
+      await store
+        .replaceTeacherSections(req.params.id, [...unique.values()])
+        .catch((err) => {
+          // Migration 002 not applied yet. Tell the director exactly what to
+          // run instead of returning a generic 500.
+          if (err?.code === 'SECTIONS_TABLE_MISSING') throw unavailable(err.message, err.code);
+          throw err;
+        });
+      res.json({ sections: await store.listTeacherSections(req.params.id) });
     }),
   );
 

@@ -1082,6 +1082,59 @@ html[dir='rtl'] .nav__item:hover {
   color: var(--muted);
 }
 
+/* Tickable list of classes for the teacher-section picker. */
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 7px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 3px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: 13.2px;
+  cursor: pointer;
+  transition: border-color var(--fast) var(--ease-soft), background var(--fast);
+}
+
+.check:hover {
+  border-color: var(--g-300);
+}
+
+.check--on {
+  border-color: var(--g-500);
+  background: var(--g-50);
+}
+
+.check input {
+  accent-color: var(--g-600);
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.check span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 11.4px;
+  margin-inline-start: 5px;
+}
+
 .input,
 .select,
 .textarea {

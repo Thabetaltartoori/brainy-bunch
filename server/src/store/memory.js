@@ -82,6 +82,24 @@ export class MemoryStore {
     this.db.sessions = this.db.sessions.filter((s) => s.user_id !== userId);
   }
 
+  // ---------- teacher sections ----------
+  async listTeacherSections(teacherId) {
+    return this.db.teacher_sections.filter((s) => s.teacher_id === teacherId);
+  }
+
+  async listAllTeacherSections() {
+    return this.db.teacher_sections;
+  }
+
+  async replaceTeacherSections(teacherId, classes) {
+    this.db.teacher_sections = this.db.teacher_sections.filter(
+      (s) => s.teacher_id !== teacherId,
+    );
+    for (const { grade, section } of classes) {
+      this.db.teacher_sections.push({ teacher_id: teacherId, grade, section });
+    }
+  }
+
   // ---------- announcements ----------
   async listAnnouncements({ activeOnly = true } = {}) {
     const rows = activeOnly

@@ -206,6 +206,10 @@ const STRINGS = {
     languageLabel: 'Interface language',
     currencyLabel: 'Currency',
     currencyHint: 'Used for every amount in the app.',
+    sectionsLabel: 'Sections',
+    sectionsHint:
+      'The teacher sees every student in the sections ticked here, plus any student linked to them individually.',
+    sectionsNone: 'No sections exist yet. Add a student first.',
     save: 'Save',
     cancel: 'Cancel',
     close: 'Close',
@@ -416,6 +420,10 @@ const STRINGS = {
     languageLabel: 'لغة الواجهة',
     currencyLabel: 'العملة',
     currencyHint: 'تُستخدم في كل المبالغ داخل التطبيق.',
+    sectionsLabel: 'الأقسام',
+    sectionsHint:
+      'يرى المعلم كل طالب في الأقسام المحددة هنا، إضافةً إلى أي طالب مرتبط به على حدة.',
+    sectionsNone: 'لا توجد أقسام بعد. أضف طالباً أولاً.',
     save: 'حفظ',
     cancel: 'إلغاء',
     close: 'إغلاق',

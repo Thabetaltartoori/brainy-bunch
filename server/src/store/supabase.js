@@ -1,6 +1,36 @@
 import { createClient } from '@supabase/supabase-js';
 
 /**
+ * Codes for a table that is not in the database. PostgREST reports a missing
+ * relation as PGRST205, while 42P01 is the Postgres-level code for the same
+ * thing, so both are accepted.
+ */
+const UNDEFINED_TABLE = new Set(['PGRST205', '42P01']);
+let warnedAboutSections = false;
+
+/**
+ * `teacher_sections` arrives with migration 002. If it has not been applied
+ * yet, read the sections as an empty set instead of failing the request, so
+ * teachers keep working through their individual links rather than every
+ * student page returning a 500. The warning is printed once per process so
+ * the cause is visible in the logs without spamming them.
+ */
+function sectionsResult({ data, error }) {
+  if (!error) return data;
+  if (UNDEFINED_TABLE.has(error.code)) {
+    if (!warnedAboutSections) {
+      warnedAboutSections = true;
+      console.warn(
+        '  warning : table "teacher_sections" is missing. Run server/sql/002-teacher-sections.sql' +
+          ' in the Supabase SQL Editor. Teachers fall back to individual links until then.',
+      );
+    }
+    return [];
+  }
+  throw error;
+}
+
+/**
  * Supabase (Postgres) driver.
  * Every method here has an identical signature to MemoryStore,
  * so the routes never know which one is live.
@@ -185,6 +215,47 @@ export class SupabaseStore {
 
   async deleteStudent(id) {
     const { error } = await this.db.from('students').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  // ---------- teacher sections ----------
+  async listTeacherSections(teacherId) {
+    const { data, error } = await this.db
+      .from('teacher_sections')
+      .select('*')
+      .eq('teacher_id', teacherId);
+    return sectionsResult({ data, error });
+  }
+
+  async listAllTeacherSections() {
+    const { data, error } = await this.db.from('teacher_sections').select('*');
+    return sectionsResult({ data, error });
+  }
+
+  async replaceTeacherSections(teacherId, classes) {
+    // Delete-then-insert: the set is small and this keeps the caller from
+    // having to diff, which is not worth a dedicated endpoint.
+    const { error: delError } = await this.db
+      .from('teacher_sections')
+      .delete()
+      .eq('teacher_id', teacherId);
+    if (delError) {
+      if (UNDEFINED_TABLE.has(delError.code)) {
+        // Tagged so the route can turn this into a 503 the admin can act on,
+        // instead of the generic "something went wrong".
+        const err = new Error(
+          'Teacher sections are not set up on this database yet. Run ' +
+            'server/sql/002-teacher-sections.sql in the Supabase SQL Editor, then try again.',
+        );
+        err.code = 'SECTIONS_TABLE_MISSING';
+        throw err;
+      }
+      throw delError;
+    }
+    if (!classes.length) return;
+    const { error } = await this.db
+      .from('teacher_sections')
+      .insert(classes.map(({ grade, section }) => ({ teacher_id: teacherId, grade, section })));
     if (error) throw error;
   }
 

@@ -4,19 +4,43 @@ import { summarizeFees } from './fees.js';
  * Who can see what.
  *
  *   admin   -> every student
- *   teacher -> only students linked to them in `teacher_students`
+ *   teacher -> students in the sections assigned to them, plus any linked
+ *              individually in `teacher_students`
  *   parent  -> only students linked to them in `guardians`
+ *
+ * Sections and individual links are combined rather than one replacing the
+ * other. A section is the convenient way to hand a teacher a whole class at
+ * once, while a link still covers the one-off case (a substitute covering a
+ * single student). Combining them also means assigning a section can never
+ * silently *reduce* what a teacher already had access to.
  *
  * This module is the single gate. Routes call it and trust the result,
  * so a row is never served without a server-side check.
  */
 
+/**
+ * Composite key for a class. JSON encoding rather than a delimiter join,
+ * because a grade or section is free text and a delimiter inside one would
+ * silently let two different classes compare equal - and this key decides who
+ * can see which student.
+ */
+export const classKey = (grade, section) => JSON.stringify([grade, section]);
+
 /** null means "no restriction" (admin). */
 export async function visibleStudentIds(store, user) {
   if (user.role === 'admin') return null;
   if (user.role === 'teacher') {
-    const links = await store.listTeacherStudents(user.id);
-    return new Set(links.map((l) => l.student_id));
+    const [links, sections, students] = await Promise.all([
+      store.listTeacherStudents(user.id),
+      store.listTeacherSections(user.id),
+      store.listStudents(),
+    ]);
+    const classes = new Set(sections.map((s) => classKey(s.grade, s.section)));
+    const ids = new Set(links.map((l) => l.student_id));
+    for (const student of students) {
+      if (classes.has(classKey(student.grade, student.section))) ids.add(student.id);
+    }
+    return ids;
   }
   if (user.role === 'parent') {
     const links = await store.listGuardians();
