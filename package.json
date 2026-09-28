@@ -1,0 +1,14 @@
+{
+  "name": "brainy-bunch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Brainy Bunch school management - Express API and React client in one deploy",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm --prefix server ci --omit=dev && npm --prefix client ci && npm --prefix client run build",
+    "start": "node server/src/index.js",
+    "doctor": "npm --prefix server run doctor"
+  }
+}

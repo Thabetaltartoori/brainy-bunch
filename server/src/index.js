@@ -1,10 +1,9 @@
-import 'dotenv/config';
-
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 
 import cors from 'cors';
+import dotenv from 'dotenv';
 import express from 'express';
 
 import { SESSION_COOKIE, parseCookies } from './auth.js';
@@ -19,6 +18,14 @@ import { MemoryStore } from './store/memory.js';
 import { SupabaseStore } from './store/supabase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Pointed at the file rather than relying on `dotenv/config`, which looks in
+// the current working directory. This script is started from the repo root by
+// `npm start` but the .env sits in server/, and a miss here would silently
+// downgrade the app to an empty in-memory store instead of failing loudly.
+// In production there is no .env file and the real environment is used.
+dotenv.config({ path: path.join(__dirname, '..', '.env'), quiet: true });
+
 const ROOT = path.resolve(__dirname, '..', '..');
 const PORT = Number(process.env.PORT) || 4100;
 const CLIENT_DIST = path.join(ROOT, 'client', 'dist');
@@ -86,7 +93,23 @@ app.use('/api/users', authed, userRoutes(store));
 
 // ---- serve the built React app ----
 if (fs.existsSync(CLIENT_DIST)) {
-  app.use(express.static(CLIENT_DIST, { maxAge: '1h' }));
+  app.use(
+    express.static(CLIENT_DIST, {
+      /**
+       * Vite fingerprints every filename under /assets, so those can be
+       * cached forever. index.html must NOT be: after a deploy the browser
+       * would keep the old shell, which points at asset files that the new
+       * build no longer contains, and the app loads as a blank page.
+       */
+      setHeaders(res, filePath) {
+        const isFingerprinted = filePath.includes(`${path.sep}assets${path.sep}`);
+        res.setHeader(
+          'Cache-Control',
+          isFingerprinted ? 'public, max-age=31536000, immutable' : 'no-cache',
+        );
+      },
+    }),
+  );
   app.get(/.*/, (_req, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
 } else {
   app.get('/', (_req, res) =>

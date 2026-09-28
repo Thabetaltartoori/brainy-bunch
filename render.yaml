@@ -1,0 +1,27 @@
+# Render blueprint - one web service serving both the API and the built client.
+# Create it at https://render.com/blueprint  (or "New > Blueprint" and point it
+# at this repo). Render will ask you to fill in the two Supabase values, which
+# are marked sync: false so nothing is hard-coded here.
+#
+# The secret key is deliberately absent from this file. It bypasses row level
+# security, so it must only ever live in the service's environment.
+
+services:
+  - type: web
+    name: brainy-bunch
+    runtime: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      # Supabase > Project Settings > API Keys
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
