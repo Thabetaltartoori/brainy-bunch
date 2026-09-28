@@ -26,24 +26,30 @@ import { summarizeFees } from './fees.js';
  */
 export const classKey = (grade, section) => JSON.stringify([grade, section]);
 
-/** null means "no restriction" (admin). */
-export async function visibleStudentIds(store, user) {
+/**
+ * null means "no restriction" (admin).
+ *
+ * `preloaded` lets a caller that has already fetched these tables in a
+ * parallel batch hand them over, so this never issues a second round trip on
+ * the critical path. Anything omitted is fetched as before.
+ */
+export async function visibleStudentIds(store, user, preloaded = {}) {
   if (user.role === 'admin') return null;
   if (user.role === 'teacher') {
-    const [links, sections, students] = await Promise.all([
-      store.listTeacherStudents(user.id),
-      store.listTeacherSections(user.id),
-      store.listStudents(),
+    const [links, sections, all] = await Promise.all([
+      preloaded.teacherLinks ?? store.listTeacherStudents(user.id),
+      preloaded.sections ?? store.listTeacherSections(user.id),
+      preloaded.students ?? store.listStudents(),
     ]);
     const classes = new Set(sections.map((s) => classKey(s.grade, s.section)));
     const ids = new Set(links.map((l) => l.student_id));
-    for (const student of students) {
+    for (const student of all) {
       if (classes.has(classKey(student.grade, student.section))) ids.add(student.id);
     }
     return ids;
   }
   if (user.role === 'parent') {
-    const links = await store.listGuardians();
+    const links = preloaded.guardianLinks ?? (await store.listGuardians());
     return new Set(links.filter((l) => l.parent_id === user.id).map((l) => l.student_id));
   }
   return new Set();
@@ -66,17 +72,27 @@ export function publicUser(user) {
  * fee summary, linked teachers/guardians and shared-note counts.
  */
 export async function loadVisibleStudents(store, user) {
-  const [allowed, payments, notes, teacherLinks, guardianLinks, users] = await Promise.all([
-    visibleStudentIds(store, user),
+  // Every table the enrichment needs, fetched in one parallel batch. The
+  // students used to be awaited *after* the others, which put a second
+  // round trip on the critical path of every list request.
+  const [all, payments, notes, teacherLinks, guardianLinks, users, sections] = await Promise.all([
+    store.listStudents(),
     store.listPayments({}),
     store.listNotes({}),
     store.listAllTeacherStudents(),
     store.listGuardians(),
     store.listUsers({}),
+    user.role === 'teacher' ? store.listTeacherSections(user.id) : [],
   ]);
 
+  const allowed = await visibleStudentIds(store, user, {
+    students: all,
+    teacherLinks,
+    guardianLinks,
+    sections,
+  });
+
   const nameOf = (id) => users.find((u) => u.id === id)?.full_name ?? '—';
-  const all = await store.listStudents();
 
   return all
     .filter((s) => allowed === null || allowed.has(s.id))

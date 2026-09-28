@@ -62,10 +62,14 @@ export function metaRoutes(store) {
   r.get(
     '/stats',
     route(async (req, res) => {
-      const students = await loadVisibleStudents(store, req.user);
+      // Issued together so the notes are not a second, serial round trip
+      // after the student list has already come back.
+      const [students, notes] = await Promise.all([
+        loadVisibleStudents(store, req.user),
+        store.listNotes({}),
+      ]);
       const period = currentPeriod();
 
-      const notes = await store.listNotes({});
       const visibleIds = new Set(students.map((s) => s.id));
       const myNotes = notes
         .filter((n) => visibleIds.has(n.student_id))

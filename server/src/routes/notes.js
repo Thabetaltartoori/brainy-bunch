@@ -27,16 +27,19 @@ export function noteRoutes(store) {
   r.get(
     '/',
     route(async (req, res) => {
-      const [visibleStudents, users] = await Promise.all([
+      // All three reads go out together. The notes used to be awaited after
+      // the others, which left a second round trip sitting on the critical
+      // path of this page for no reason.
+      const [visibleStudents, users, all] = await Promise.all([
         loadVisibleStudents(store, req.user),
         store.listUsers({}),
+        store.listNotes({}),
       ]);
 
       const allowed = new Set(visibleStudents.map((s) => s.id));
       const names = new Map(visibleStudents.map((s) => [s.id, s.full_name]));
       const nameOf = (id) => users.find((u) => u.id === id)?.full_name ?? '—';
 
-      const all = await store.listNotes({});
       const notes = all
         .filter((n) => allowed.has(n.student_id))
         .filter((n) => (req.user.role === 'parent' ? n.is_shared : true))

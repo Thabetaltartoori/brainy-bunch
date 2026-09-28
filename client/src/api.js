@@ -12,33 +12,77 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Reads are reused for a few seconds.
+ *
+ * Every page re-fetched the same handful of lists on mount, and each of those
+ * is a round trip to the database, so moving between pages left the content
+ * area empty for a second or more. A short window makes moving around instant
+ * without the data ever being meaningfully out of date, and any successful
+ * write clears it immediately so a saved change is never hidden.
+ *
+ * Concurrent identical reads share one request, which is always safe.
+ */
+const READ_TTL_MS = 4000;
+const readCache = new Map();
+const inflightReads = new Map();
+
+function invalidateReads() {
+  readCache.clear();
+  inflightReads.clear();
+}
+
 async function request(method, path, body) {
-  let res;
-  try {
-    res = await fetch(path, {
-      method,
-      credentials: 'include',
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  } catch {
-    throw new ApiError(0, 'network', 'OFFLINE');
+  const isRead = method === 'GET';
+
+  if (isRead) {
+    const hit = readCache.get(path);
+    if (hit && hit.expires > Date.now()) return hit.value;
+    const pending = inflightReads.get(path);
+    if (pending) return pending;
   }
 
-  const text = await res.text();
-  let data = null;
-  if (text) {
+  const run = async () => {
+    let res;
     try {
-      data = JSON.parse(text);
+      res = await fetch(path, {
+        method,
+        credentials: 'include',
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
     } catch {
-      throw new ApiError(res.status, 'Malformed response from the server', 'BAD_JSON');
+      throw new ApiError(0, 'network', 'OFFLINE');
     }
-  }
 
-  if (!res.ok) {
-    throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`, data?.code);
-  }
-  return data;
+    const text = await res.text();
+    let data = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new ApiError(res.status, 'Malformed response from the server', 'BAD_JSON');
+      }
+    }
+
+    if (!res.ok) {
+      throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`, data?.code);
+    }
+
+    if (isRead) {
+      readCache.set(path, { value: data, expires: Date.now() + READ_TTL_MS });
+    } else {
+      // A write just changed something the cached reads describe.
+      invalidateReads();
+    }
+    return data;
+  };
+
+  if (!isRead) return run();
+
+  const started = run().finally(() => inflightReads.delete(path));
+  inflightReads.set(path, started);
+  return started;
 }
 
 const qs = (params) => {
@@ -49,6 +93,11 @@ const qs = (params) => {
 };
 
 export const api = {
+  // Drop every cached read. Signing out must always call this, so that a
+  // failed logout cannot leave the next person looking at the previous
+  // session's lists.
+  invalidateCache: invalidateReads,
+
   // auth
   login: (email, password) => request('POST', '/api/auth/login', { email, password }),
   logout: () => request('POST', '/api/auth/logout'),

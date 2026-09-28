@@ -113,9 +113,13 @@ export class SupabaseStore {
   }
 
   async getSessionUser(token) {
+    // One round trip. PostgREST follows the user_id -> profiles foreign key,
+    // so the session and the account arrive together. Asking for the session
+    // and then looking the user up separately added a second round trip to
+    // *every* request, which on a slow link was most of the page's wait.
     const { data, error } = await this.db
       .from('sessions')
-      .select('user_id, expires_at')
+      .select('user_id, expires_at, profiles(*)')
       .eq('token', token)
       .maybeSingle();
     if (error) throw error;
@@ -124,7 +128,9 @@ export class SupabaseStore {
       await this.deleteSession(token);
       return null;
     }
-    return this.getUserById(data.user_id);
+    // PostgREST returns an object for a to-one embed, but tolerate an array.
+    const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
+    return profile ?? null;
   }
 
   async deleteSession(token) {

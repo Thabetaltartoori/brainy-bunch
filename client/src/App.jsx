@@ -61,9 +61,19 @@ function Root() {
 
   /** Banner + dashboard figures, shared by every page. */
   const refresh = useCallback(async () => {
-    const [meta, s] = await Promise.allSettled([api.announcements(), api.stats()]);
+    // The student list is what Students, Payments and Notes each open on, and
+    // each read is a trip to the database. Asking for it here, alongside the
+    // dashboard figures the shell already needs, warms the read cache so the
+    // first tap on those pages is already filled in. The server scopes the
+    // list to whoever is signed in, so this never reveals extra students.
+    const [meta, s, list] = await Promise.allSettled([
+      api.announcements(),
+      api.stats(),
+      api.students({}),
+    ]);
     if (meta.status === 'fulfilled') setAnnouncements(meta.value.announcements);
     if (s.status === 'fulfilled') setStats(s.value);
+    return list;
   }, []);
 
   useEffect(() => {
@@ -74,6 +84,9 @@ function Root() {
     try {
       await api.logout();
     } finally {
+      // Whether or not the logout call succeeded, nothing from this session
+      // may be left readable by whoever signs in next.
+      api.invalidateCache();
       setUser(null);
       setStats(null);
       setAnnouncements([]);
