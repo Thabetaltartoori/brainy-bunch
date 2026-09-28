@@ -42,6 +42,7 @@ export function Payments({ user, onChanged }) {
   const [paying, setPaying] = useState(null);
 
   const isAdmin = user.role === 'admin';
+  const isParent = user.role === 'parent';
 
   const load = useCallback(async () => {
     try {
@@ -103,29 +104,32 @@ export function Payments({ user, onChanged }) {
         <Segment options={filters} value={status} onChange={setStatus} ariaLabel={t('colStatus')} />
       </PageHeader>
 
-      <div className="stats stagger">
-        <Stat
-          label={t('collected')}
-          value={formatMoneyShort(totals.paid, currency, lang)}
-          icon={<IconTrendUp size={19} />}
-          percent={rate}
-          foot={`${t('payRate')}: ${rate}%`}
-        />
-        <Stat
-          label={t('statOutstanding')}
-          value={formatMoneyShort(totals.outstanding, currency, lang)}
-          icon={<IconAlert size={19} />}
-          tone="red"
-          danger={totals.outstanding > 0}
-          foot={`${t('expected')}: ${formatMoneyShort(totals.expected, currency, lang)}`}
-        />
-        <Stat
-          label={t('statPaidCount')}
-          value={`${totals.paidCount}/${students.length}`}
-          icon={<IconCheck size={19} />}
-          foot={formatPeriod(currentPeriod(), lang)}
-        />
-      </div>
+      {/* A parent sees one figure per child, not a combined school total. */}
+      {!isParent && (
+        <div className="stats stagger">
+          <Stat
+            label={t('collected')}
+            value={formatMoneyShort(totals.paid, currency, lang)}
+            icon={<IconTrendUp size={19} />}
+            percent={rate}
+            foot={`${t('payRate')}: ${rate}%`}
+          />
+          <Stat
+            label={t('statOutstanding')}
+            value={formatMoneyShort(totals.outstanding, currency, lang)}
+            icon={<IconAlert size={19} />}
+            tone="red"
+            danger={totals.outstanding > 0}
+            foot={`${t('expected')}: ${formatMoneyShort(totals.expected, currency, lang)}`}
+          />
+          <Stat
+            label={t('statPaidCount')}
+            value={`${totals.paidCount}/${students.length}`}
+            icon={<IconCheck size={19} />}
+            foot={formatPeriod(currentPeriod(), lang)}
+          />
+        </div>
+      )}
 
       <div className="section">
         <Card pad={false}>
