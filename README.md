@@ -52,12 +52,43 @@ Open **http://localhost:5173** and sign in with a demo account below.
 
 ### To run it as one app (production)
 
+From the repository root:
+
 ```bash
-cd client && npm run build     # builds into client/dist
-cd ../server && npm start      # Express serves the API *and* the app on :4100
+npm run build     # installs both packages and builds the client into client/dist
+npm start         # Express serves the API *and* the app on one port
 ```
 
-Then open **http://localhost:4100**.
+Then open **http://localhost:4100** (`PORT=4200` to use a different port).
+
+The session cookie is set with `Secure` whenever `NODE_ENV=production`, so local
+production testing needs real HTTPS or the browser will discard the cookie.
+
+---
+
+## 🌐 Deploying to Render
+
+The app is one Node service: Express serves the API and the built client from a
+single origin, so there is no CORS setup and no separate static host.
+`render.yaml` is a ready blueprint.
+
+1. Push the repo to GitHub.
+2. At **render.com/blueprint**, connect the repository and apply the blueprint.
+3. Fill in the two prompted values:
+   - `SUPABASE_URL` — from Supabase → Project Settings → API Keys
+   - `SUPABASE_SERVICE_ROLE_KEY` — the `sb_secret_...` key, same page
+4. Deploy. The first build takes a few minutes.
+
+Render runs `npm run build` and `npm start`, uses `/health` for its health
+check, and serves the result over HTTPS.
+
+> ⚠️ Never put `SUPABASE_SERVICE_ROLE_KEY` anywhere that reaches the browser —
+> not in Netlify/Vercel build variables, not in `VITE_*` variables, not in a
+> committed file. It bypasses row-level security. It belongs only in the
+> server's environment.
+
+The free tier sleeps after inactivity, so the first request after a pause takes
+roughly 30 seconds while the service wakes.
 
 ---
 
@@ -125,10 +156,20 @@ This is the part that matters most in a school, so it is enforced in one place �
 | Role | Can see students | Can write notes | Can record payments | Can manage users |
 |---|---|---|---|---|
 | `admin` | all | yes | yes | yes |
-| `teacher` | only students in `teacher_students` | own students, own notes | no | no |
+| `teacher` | students in their assigned **sections**, plus any linked in `teacher_students` | own students, own notes | no | no |
 | `parent` | only children in `guardians`, **shared notes only** | no | no | no |
 
 A teacher who is not assigned to a student gets `403` — verified in the test script below.
+
+### Teacher sections
+
+A teacher can be given whole classes at once instead of linking students one by
+one. In **Staff → edit a teacher**, tick the sections they cover; the list is
+built from the classes that actually have students in them.
+
+Sections need one table, created by `server/sql/002-teacher-sections.sql`. Until
+that is applied the server logs a warning and falls back to the individual
+links, so nothing breaks in the meantime.
 
 ---
 
