@@ -32,6 +32,14 @@ import { IconAlert, IconCheck, IconMoney, IconTrendUp, IconWallet } from '../ico
 
 const STATUS_TONE = { paid: 'green', partial: 'amber', unpaid: 'red' };
 
+/**
+ * Stand-in for a student with no payments recorded.
+ *
+ * Shared on purpose: it is used as a useEffect dependency, and a fresh `{}`
+ * each render would re-run that effect on every single render.
+ */
+const NO_PAYMENTS = {};
+
 export function Payments({ user, onChanged }) {
   const { t, lang } = useI18n();
   const [currency] = useCurrency();
@@ -239,7 +247,9 @@ export function Payments({ user, onChanged }) {
 function PayModal({ student, onClose, onSaved }) {
   const { t, lang } = useI18n();
   const [currency] = useCurrency();
-  const existing = student.feeSummary.paidPeriods;
+  // A plain object keyed by month, not a Map. The default keeps the form
+  // usable if a student ever comes back without a fee summary.
+  const existing = student.feeSummary?.paidPeriods ?? NO_PAYMENTS;
 
   const [period, setPeriod] = useState(currentPeriod());
   const [amount, setAmount] = useState(student.monthly_fee);
@@ -250,7 +260,7 @@ function PayModal({ student, onClose, onSaved }) {
 
   // Prefill when switching month to one that already has a payment.
   useEffect(() => {
-    const found = existing.get(period);
+    const found = existing[period];
     setAmount(found ? Number(found.amount) : Number(student.monthly_fee) || 0);
     setMethod(found?.method ?? 'cash');
     setPaidOn(found?.paid_on ?? todayISO());
@@ -280,7 +290,7 @@ function PayModal({ student, onClose, onSaved }) {
     <Modal
       open
       onClose={onClose}
-      title={existing.has(period) ? t('editPayment') : t('recordPayment')}
+      title={Object.hasOwn(existing, period) ? t('editPayment') : t('recordPayment')}
       subtitle={student.full_name}
       footer={
         <>
@@ -300,7 +310,7 @@ function PayModal({ student, onClose, onSaved }) {
               {recentPeriods(14).reverse().map((p) => (
                 <option key={p} value={p}>
                   {formatPeriod(p, lang)}
-                  {existing.has(p) ? ' ✓' : ''}
+                  {Object.hasOwn(existing, p) ? ' ✓' : ''}
                 </option>
               ))}
             </select>

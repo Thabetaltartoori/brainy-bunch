@@ -48,6 +48,14 @@ const KIND_TONE = { praise: 'green', recommendation: 'amber', concern: 'red' };
 const STATUS_TONE = { paid: 'green', partial: 'amber', unpaid: 'red' };
 const TABS = ['overview', 'notes', 'payments', 'people'];
 
+/**
+ * Stand-in for a student with no payments recorded.
+ *
+ * Shared on purpose: it is used as a useEffect dependency, and a fresh `{}`
+ * each render would re-run that effect on every single render.
+ */
+const NO_PAYMENTS = {};
+
 export function StudentProfile({ user, onChanged }) {
   const { id } = useParams();
   const { t, lang, dir } = useI18n();
@@ -419,7 +427,7 @@ function Ledger({ student, onPay, onDelete }) {
   return (
     <div className="ledger">
       {rows.map((period) => {
-        const payment = fee.paidPeriods.get(period);
+        const payment = fee.paidPeriods[period];
         const isCurrent = period === now;
         const short = payment && student.monthly_fee > 0 && Number(payment.amount) < student.monthly_fee;
         const overdue = !payment && period < now;
@@ -735,7 +743,7 @@ function NoteModal({ open, studentId, onClose, onSaved }) {
 function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
   const { t, lang } = useI18n();
   const [currency] = useCurrency();
-  const existing = student?.feeSummary?.paidPeriods ?? new Map();
+  const existing = student?.feeSummary?.paidPeriods ?? NO_PAYMENTS;
 
   const [period, setPeriod] = useState(currentPeriod());
   const [amount, setAmount] = useState(student?.monthly_fee ?? 0);
@@ -779,7 +787,7 @@ function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
     <Modal
       open={open}
       onClose={onClose}
-      title={existing.has(period) ? t('editPayment') : t('recordPayment')}
+      title={Object.hasOwn(existing, period) ? t('editPayment') : t('recordPayment')}
       subtitle={student?.full_name}
       footer={
         <>
@@ -799,7 +807,7 @@ function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
               {recentPeriods(14).reverse().map((p) => (
                 <option key={p} value={p}>
                   {formatPeriod(p, lang)}
-                  {existing.has(p) ? ' ✓' : ''}
+                  {Object.hasOwn(existing, p) ? ' ✓' : ''}
                 </option>
               ))}
             </select>

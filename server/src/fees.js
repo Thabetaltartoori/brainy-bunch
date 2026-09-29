@@ -85,7 +85,15 @@ export function summarizeFees(student, payments) {
     prepaid,
     currentStatus,
     currentPeriod: now,
-    paidPeriods,
+    /**
+     * The Map above, flattened to a plain object.
+     *
+     * This travels to the browser inside the JSON response, and JSON has no
+     * Map: it arrives as {} , so every .get() and .has() the client runs on
+     * it throws and the page renders blank. One shape for both sides means
+     * the lookup style cannot drift apart again.
+     */
+    paidPeriods: Object.fromEntries(paidPeriods),
     overdueCount: periods.filter((p) => periodKey(p) < periodKey(now) && !paidPeriods.has(p))
       .length,
   };

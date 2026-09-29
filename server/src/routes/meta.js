@@ -80,9 +80,10 @@ export function metaRoutes(store) {
         byGrade[s.grade] = (byGrade[s.grade] ?? 0) + 1;
       }
 
+      // paidPeriods is a plain object, not a Map: see the note in fees.js.
       const collectedThisMonth = students
-        .filter((s) => s.feeSummary.paidPeriods.has(period))
-        .reduce((sum, s) => sum + Number(s.feeSummary.paidPeriods.get(period).amount ?? 0), 0);
+        .filter((s) => Object.hasOwn(s.feeSummary.paidPeriods, period))
+        .reduce((sum, s) => sum + Number(s.feeSummary.paidPeriods[period].amount ?? 0), 0);
 
       res.json({
         period,
