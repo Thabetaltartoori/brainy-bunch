@@ -19,10 +19,10 @@
   NODE_VERSION = "20"
 
 [functions]
-  # api.mjs is ESM. The bundler picks the output format from the file
-  # extension, and server/src/index.js uses a top-level `await` to open the
-  # database connection, which esbuild refuses to emit in CJS. A plain .js
-  # entry would make the build depend on the bundler guessing right.
+  # api.mjs is ESM, which keeps the bundle in the module format the server
+  # source is written in. The server no longer has a top-level `await` either,
+  # so the build does not depend on the bundler choosing the right format: it
+  # bundles either way.
   node_bundler = "esbuild"
 
 [functions.environment]

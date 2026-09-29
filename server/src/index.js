@@ -17,26 +17,52 @@ import { userRoutes } from './routes/users.js';
 import { MemoryStore } from './store/memory.js';
 import { SupabaseStore } from './store/supabase.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+/**
+ * Where this file lives, worked out in a way that survives either module
+ * format.
+ *
+ * A serverless runtime may bundle this as CommonJS, and esbuild empties
+ * `import.meta` when it does, so reading `import.meta.url` unguarded would
+ * throw while the module loads. The fallback only ever affects the two paths
+ * below, and neither is used under a function: there is no .env to read, and
+ * the static build is served by the CDN rather than from disk.
+ */
+const HERE = (() => {
+  const url = import.meta?.url;
+  return url ? path.dirname(fileURLToPath(url)) : process.cwd();
+})();
 
 // Pointed at the file rather than relying on `dotenv/config`, which looks in
 // the current working directory. This script is started from the repo root by
 // `npm start` but the .env sits in server/, and a miss here would silently
 // downgrade the app to an empty in-memory store instead of failing loudly.
 // In production there is no .env file and the real environment is used.
-dotenv.config({ path: path.join(__dirname, '..', '.env'), quiet: true });
+dotenv.config({ path: path.join(HERE, '..', '.env'), quiet: true });
 
-const ROOT = path.resolve(__dirname, '..', '..');
+const ROOT = path.resolve(HERE, '..', '..');
 const PORT = Number(process.env.PORT) || 4100;
 const CLIENT_DIST = path.join(ROOT, 'client', 'dist');
 
 /** Supabase when configured, otherwise an in-memory store for local preview. */
-async function createStore() {
+function createStore() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (url && key) {
     const store = new SupabaseStore(url, key);
-    await store.init();
+    /**
+     * A reachability check, deliberately not awaited.
+     *
+     * It used to be awaited so a bad project URL stopped the process at once.
+     * Awaiting it here instead meant this module had a top-level await, which
+     * esbuild cannot emit when it bundles for a serverless runtime, and the
+     * deploy quietly fell back to shipping a zip. The store is fully usable
+     * the moment the constructor returns, so the check is now a log line and
+     * nothing more: a wrong URL still reports itself, it just does not stop
+     * the server from starting.
+     */
+    store.init().catch((err) => {
+      console.error(`  storage : Supabase unreachable - ${err.message}`);
+    });
     console.log('  storage : Supabase (Postgres)');
     return store;
   }
@@ -44,8 +70,18 @@ async function createStore() {
   return new MemoryStore();
 }
 
-const store = await createStore();
-const app = express();
+const store = createStore();
+export const app = express();
+
+if (process.env.NETLIFY === 'true') {
+  app.use((req, _res, next) => {
+    const functionPrefix = '/.netlify/functions/api';
+    if (req.url.startsWith(functionPrefix)) {
+      req.url = req.url.slice(functionPrefix.length) || '/';
+    }
+    next();
+  });
+}
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '256kb' }));
@@ -139,7 +175,9 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Something went wrong on the server', code: 'INTERNAL' });
 });
 
-app.listen(PORT, () => {
-  console.log(`\n  Brainy Bunch server  ->  http://localhost:${PORT}`);
-  console.log(`  driver: ${store.driver}\n`);
-});
+if (process.env.NETLIFY !== 'true') {
+  app.listen(PORT, () => {
+    console.log(`\n  Brainy Bunch server  ->  http://localhost:${PORT}`);
+    console.log(`  driver: ${store.driver}\n`);
+  });
+}
