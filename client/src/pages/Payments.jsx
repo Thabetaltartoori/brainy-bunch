@@ -263,7 +263,13 @@ function PayModal({ student, onClose, onSaved }) {
   // the button says so, rather than asking someone to trust that the number
   // it filled in for them is the number they wanted.
   const fullFee = Number(student.monthly_fee) || 0;
-  const isFullFee = fullFee > 0 && Number(amount) === fullFee;
+  const entered = Number(amount) || 0;
+  const isFullFee = fullFee > 0 && entered === fullFee;
+  // Entering 0 settles the month rather than part-paying it, so the button
+  // says that instead of the vaguer "save".
+  const isSettled = entered === 0;
+  const action = isSettled ? t('markSettled') : isFullFee ? t('markPaid') : t('save');
+  const hint = isSettled ? t('markSettledHint') : isFullFee ? t('markPaidHint') : undefined;
 
   // Prefill when switching month to one that already has a payment.
   useEffect(() => {
@@ -305,7 +311,7 @@ function PayModal({ student, onClose, onSaved }) {
             {t('cancel')}
           </Button>
           <Button onClick={submit} loading={busy}>
-            {isFullFee ? t('markPaid') : t('save')}
+            {action}
           </Button>
         </>
       }
@@ -322,7 +328,7 @@ function PayModal({ student, onClose, onSaved }) {
               ))}
             </select>
           </Field>
-          <Field label={t('amountLabel')} required hint={isFullFee ? t('markPaidHint') : undefined}>
+          <Field label={t('amountLabel')} required hint={hint}>
             <input
               className="input mono"
               type="number"

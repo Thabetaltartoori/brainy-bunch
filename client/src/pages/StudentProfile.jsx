@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useI18n } from '../i18n.jsx';
 import { api } from '../api.js';
 import { PageHeader } from '../components/Shell.jsx';
+import { ParentFields, createParentAndAttach, suggestEmail, validateParent } from '../components/CreateParent.jsx';
 import {
   Avatar,
   Badge,
@@ -546,6 +547,7 @@ function PeopleCard({ title, people, students, onChanged }) {
         onClose={() => setOpen(false)}
         role={isGuardian ? 'parent' : 'teacher'}
         studentId={students[0].id}
+        studentName={students[0].full_name}
         existing={people.map((p) => p.id)}
         onDone={async () => {
           setOpen(false);
@@ -564,13 +566,16 @@ function RemoveLink({ onClick, label }) {
   );
 }
 
-function AssignModal({ open, onClose, role, studentId, existing, onDone }) {
+function AssignModal({ open, onClose, role, studentId, studentName, existing, onDone }) {
   const { t } = useI18n();
   const [users, setUsers] = useState([]);
   const [selected, setSelected] = useState('');
   const [extra, setExtra] = useState('');
   const [busy, setBusy] = useState(false);
   const isGuardian = role === 'parent';
+  const [mode, setMode] = useState('pick');
+  const [draft, setDraft] = useState({ name: '', email: '', password: '' });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (!open) return;
@@ -580,7 +585,40 @@ function AssignModal({ open, onClose, role, studentId, existing, onDone }) {
       .catch((err) => toast(err.message, 'error'));
   }, [open, role, existing]);
 
+  // Start the new account off named after the child, which is what makes it
+  // recognisable in the staff list where a family can hold several accounts.
+  useEffect(() => {
+    if (!open || !isGuardian) return;
+    setMode('pick');
+    setErrors({});
+    setDraft({ name: studentName ?? '', email: suggestEmail(studentName), password: '' });
+  }, [open, isGuardian, studentName]);
+
   async function submit() {
+    if (isGuardian && mode === 'create') {
+      const found = validateParent(draft, t);
+      setErrors(found);
+      if (Object.keys(found).length) return;
+      setBusy(true);
+      try {
+        const { attached } = await createParentAndAttach({
+          studentId,
+          name: draft.name,
+          email: draft.email,
+          password: draft.password,
+          relation: extra,
+        });
+        toast(attached ? t('parentCreated') : t('parentCreatedNotLinked'), attached ? 'ok' : 'error');
+        onDone();
+        onClose();
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     if (!selected) return;
     setBusy(true);
     try {
@@ -597,6 +635,8 @@ function AssignModal({ open, onClose, role, studentId, existing, onDone }) {
     }
   }
 
+  const creating = isGuardian && mode === 'create';
+
   return (
     <Modal
       open={open}
@@ -607,14 +647,53 @@ function AssignModal({ open, onClose, role, studentId, existing, onDone }) {
           <Button variant="ghost" onClick={onClose} type="button">
             {t('cancel')}
           </Button>
-          <Button onClick={submit} loading={busy} disabled={!selected}>
-            {t('save')}
+          <Button
+            onClick={submit}
+            loading={busy}
+            disabled={creating ? false : !selected}
+          >
+            {creating ? t('createParent') : t('save')}
           </Button>
         </>
       }
     >
-      {users.length === 0 ? (
-        <Empty icon={<IconUser size={22} />} title={t('nothingToShow')} />
+      {isGuardian && (
+        <div style={{ marginBottom: 14 }}>
+          <Button
+            variant="ghost"
+            type="button"
+            onClick={() => {
+              setMode(creating ? 'pick' : 'create');
+              setErrors({});
+            }}
+          >
+            {creating ? t('chooseExistingParent') : t('createParent')}
+          </Button>
+        </div>
+      )}
+
+      {creating ? (
+        <div className="form">
+          <p style={{ margin: '0 0 12px', color: 'var(--muted)' }}>{t('createParentHint')}</p>
+          <ParentFields value={draft} onChange={setDraft} errors={errors} />
+          <Field label={t('relation')} hint={t('relationFather')}>
+            <input
+              className="input"
+              value={extra}
+              onChange={(e) => setExtra(e.target.value)}
+              placeholder={t('relationMother')}
+            />
+          </Field>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="form">
+          <Empty icon={<IconUser size={22} />} title={isGuardian ? t('noParentYet') : t('nothingToShow')} />
+          {isGuardian && (
+            <Button onClick={() => setMode('create')} type="button">
+              {t('createParent')}
+            </Button>
+          )}
+        </div>
       ) : (
         <div className="form">
           <Field label={isGuardian ? t('colRole') : t('teachersLabel')} required>
@@ -755,7 +834,13 @@ function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
   // When the amount is left at the full fee the button says "mark as paid",
   // so the usual case is pick a month and press one button.
   const fullFee = Number(student?.monthly_fee) || 0;
-  const isFullFee = fullFee > 0 && Number(amount) === fullFee;
+  const entered = Number(amount) || 0;
+  const isFullFee = fullFee > 0 && entered === fullFee;
+  // Entering 0 settles the month rather than part-paying it, so the button
+  // says that instead of the vaguer "save".
+  const isSettled = entered === 0;
+  const action = isSettled ? t('markSettled') : isFullFee ? t('markPaid') : t('save');
+  const hint = isSettled ? t('markSettledHint') : isFullFee ? t('markPaidHint') : undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -801,7 +886,7 @@ function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
             {t('cancel')}
           </Button>
           <Button onClick={submit} loading={busy}>
-            {isFullFee ? t('markPaid') : t('save')}
+            {action}
           </Button>
         </>
       }
@@ -819,7 +904,7 @@ function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
             </select>
           </Field>
 
-          <Field label={t('amountLabel')} required hint={isFullFee ? t('markPaidHint') : undefined}>
+          <Field label={t('amountLabel')} required hint={hint}>
             <input
               className="input mono"
               type="number"

@@ -55,10 +55,17 @@ export function summarizeFees(student, payments) {
   const billed = new Set(periods);
   const paidPeriods = new Map();
   let paid = 0;
+  // Fees covered by a payment of nothing. A payment recorded as 0 is how a
+  // waived month, a scholarship month or a write-off is entered. That month is
+  // settled, so it has to stop counting as outstanding, otherwise the row reads
+  // paid while the totals still read owed.
+  let waived = 0;
   for (const p of payments) {
     if (billed.has(p.period)) {
-      paid += Number(p.amount ?? 0);
+      const amount = Number(p.amount ?? 0);
+      paid += amount;
       paidPeriods.set(p.period, p);
+      if (amount === 0) waived += fee;
     }
   }
   // Pre-payments are still shown, just not netted off what is due.
@@ -66,14 +73,26 @@ export function summarizeFees(student, payments) {
   const credit = prepaid.reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
 
   const expected = fee * periods.length;
-  const balance = Math.max(0, expected - paid);
+  const balance = Math.max(0, expected - paid - waived);
 
   const currentPayment = paidPeriods.get(now) ?? null;
-  const currentStatus = !currentPayment
-    ? 'unpaid'
-    : fee > 0 && Number(currentPayment.amount) < fee
-      ? 'partial'
-      : 'paid';
+  const currentAmount = currentPayment ? Number(currentPayment.amount ?? 0) : 0;
+  const currentStatus =
+    // Nothing billed means nothing outstanding. A student on a zero or missing
+    // fee was reported as 'unpaid' purely because no payment row existed for
+    // the month, which put them in the unpaid filter and showed a red badge
+    // next to a balance of zero.
+    //
+    // A payment of nothing settles the month just as one covering the whole fee
+    // does. Judged against the fee on its own it would read as a part payment,
+    // which is the opposite of what entering 0 is there to say.
+    fee <= 0
+      ? 'paid'
+      : !currentPayment
+        ? 'unpaid'
+        : currentAmount === 0 || currentAmount >= fee
+          ? 'paid'
+          : 'partial';
 
   return {
     fee,
