@@ -113,6 +113,14 @@ function Root() {
     >
       <Routes>
         <Route path="/" element={<Dashboard stats={stats} user={user} />} />
+        {/*
+          The sign-in screen is shown whenever there is no user, whatever the
+          address bar says, so a session that lapses on any page leaves the
+          login form up in that page's place. Signing in then hands the address
+          to the router, and /login is not a page, so it fell through to the
+          404. Treat it as the front page.
+        */}
+        <Route path="/login" element={<Navigate to="/" replace />} />
         <Route
           path="/students"
           element={<Students user={user} onChanged={refresh} />}
