@@ -258,6 +258,13 @@ function PayModal({ student, onClose, onSaved }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Choosing a month fills in that month's full fee, so the common case is
+  // pick a month, press one button. When the amount is left at the full fee
+  // the button says so, rather than asking someone to trust that the number
+  // it filled in for them is the number they wanted.
+  const fullFee = Number(student.monthly_fee) || 0;
+  const isFullFee = fullFee > 0 && Number(amount) === fullFee;
+
   // Prefill when switching month to one that already has a payment.
   useEffect(() => {
     const found = existing[period];
@@ -298,7 +305,7 @@ function PayModal({ student, onClose, onSaved }) {
             {t('cancel')}
           </Button>
           <Button onClick={submit} loading={busy}>
-            {t('save')}
+            {isFullFee ? t('markPaid') : t('save')}
           </Button>
         </>
       }
@@ -315,7 +322,7 @@ function PayModal({ student, onClose, onSaved }) {
               ))}
             </select>
           </Field>
-          <Field label={t('amountLabel')} required>
+          <Field label={t('amountLabel')} required hint={isFullFee ? t('markPaidHint') : undefined}>
             <input
               className="input mono"
               type="number"

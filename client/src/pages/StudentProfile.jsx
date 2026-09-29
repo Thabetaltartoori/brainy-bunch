@@ -752,12 +752,18 @@ function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // When the amount is left at the full fee the button says "mark as paid",
+  // so the usual case is pick a month and press one button.
+  const fullFee = Number(student?.monthly_fee) || 0;
+  const isFullFee = fullFee > 0 && Number(amount) === fullFee;
+
   useEffect(() => {
     if (!open) return;
     const p = initialPeriod ?? currentPeriod();
     setPeriod(p);
     // Pre-fill from the existing payment for that month, or the student's fee.
-    const found = existing.get(p);
+    // `existing` is a plain object, so this is a key lookup, not a Map .get().
+    const found = existing[p];
     setAmount(found ? Number(found.amount) : Number(student?.monthly_fee ?? 0));
     setMethod(found?.method ?? 'cash');
     setPaidOn(found?.paid_on ?? todayISO());
@@ -795,7 +801,7 @@ function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
             {t('cancel')}
           </Button>
           <Button onClick={submit} loading={busy}>
-            {t('save')}
+            {isFullFee ? t('markPaid') : t('save')}
           </Button>
         </>
       }
@@ -813,7 +819,7 @@ function PaymentModal({ open, student, initialPeriod, onClose, onSaved }) {
             </select>
           </Field>
 
-          <Field label={t('amountLabel')} required>
+          <Field label={t('amountLabel')} required hint={isFullFee ? t('markPaidHint') : undefined}>
             <input
               className="input mono"
               type="number"
