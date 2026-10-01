@@ -26,9 +26,11 @@ const TABLES = [
   'profiles',
   'sessions',
   'students',
+  'teacher_sections',
   'teacher_students',
   'guardians',
   'notes',
+  'assessments',
   'payments',
   'announcements',
 ];
@@ -66,4 +68,4 @@ if (missing.length) {
   console.log(`\n  ${missing.length} table(s) missing. Run sql/schema.sql in the Supabase SQL Editor.\n`);
   process.exit(1);
 }
-console.log('\n  All 8 tables present and readable. Run `npm run seed:cloud` to load the data.\n');
+console.log('\n  All 10 tables present and readable. Run `npm run seed:cloud` to load the data.\n');

@@ -78,6 +78,21 @@ create table if not exists notes (
 );
 create index if not exists notes_student_idx on notes (student_id, created_at desc);
 
+-- ---------- student test results ----------
+create table if not exists assessments (
+  id          uuid primary key default gen_random_uuid(),
+  student_id  uuid not null references students (id) on delete cascade,
+  teacher_id  uuid not null references profiles (id) on delete cascade,
+  subject     text not null,
+  test_name   text not null,
+  test_date   date not null default current_date,
+  score       numeric(7, 2) not null check (score >= 0),
+  max_score   numeric(7, 2) not null check (max_score > 0 and score <= max_score),
+  created_at  timestamptz not null default now()
+);
+create index if not exists assessments_student_date_idx
+  on assessments (student_id, test_date desc, created_at desc);
+
 -- ---------- monthly tuition payments ----------
 create table if not exists payments (
   id          uuid primary key default gen_random_uuid(),
@@ -128,6 +143,7 @@ alter table teacher_sections enable row level security;
 alter table teacher_students enable row level security;
 alter table guardians       enable row level security;
 alter table notes           enable row level security;
+alter table assessments     enable row level security;
 alter table payments        enable row level security;
 alter table announcements   enable row level security;
 
@@ -138,8 +154,12 @@ revoke all on teacher_sections from anon, authenticated;
 revoke all on teacher_students from anon, authenticated;
 revoke all on guardians        from anon, authenticated;
 revoke all on notes            from anon, authenticated;
+revoke all on assessments      from anon, authenticated;
 revoke all on payments         from anon, authenticated;
 revoke all on announcements    from anon, authenticated;
+
+grant all on assessments to service_role;
+grant all on teacher_sections to service_role;
 
 -- No policies are created on purpose. With RLS enabled and zero policies,
 -- anon and authenticated match no rows -- which is the correct answer here,

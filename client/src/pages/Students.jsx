@@ -29,6 +29,8 @@ const EMPTY_STUDENT = {
   is_active: true,
 };
 
+const GRADE_LEVELS = ['KG1', 'KG2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+
 export function Students({ user, onChanged }) {
   const { t, lang } = useI18n();
   const [currency] = useCurrency();
@@ -408,12 +410,19 @@ function StudentForm({ student, onClose, onSave, busy }) {
 
         <div className="grid-2">
           <Field label={t('gradeLabel')} required error={errors.grade}>
-            <input
-              className={`input ${errors.grade ? 'input--error' : ''}`}
+            <select
+              className={`select ${errors.grade ? 'select--error' : ''}`}
               value={form.grade ?? ''}
               onChange={set('grade')}
-              placeholder="Grade 4"
-            />
+            >
+              <option value="">—</option>
+              {!GRADE_LEVELS.includes(form.grade) && form.grade && (
+                <option value={form.grade}>{form.grade}</option>
+              )}
+              {GRADE_LEVELS.map((grade) => (
+                <option key={grade} value={grade}>{grade}</option>
+              ))}
+            </select>
           </Field>
           <Field label={t('sectionLabel')}>
             <input

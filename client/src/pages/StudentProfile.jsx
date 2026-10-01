@@ -47,7 +47,7 @@ import {
 
 const KIND_TONE = { praise: 'green', recommendation: 'amber', concern: 'red' };
 const STATUS_TONE = { paid: 'green', partial: 'amber', unpaid: 'red' };
-const TABS = ['overview', 'notes', 'payments', 'people'];
+const TABS = ['overview', 'notes', 'assessments', 'payments', 'people'];
 
 /**
  * Stand-in for a student with no payments recorded.
@@ -66,6 +66,7 @@ export function StudentProfile({ user, onChanged }) {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState('overview');
   const [noteOpen, setNoteOpen] = useState(false);
+  const [assessmentOpen, setAssessmentOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [removing, setRemoving] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -109,7 +110,7 @@ export function StudentProfile({ user, onChanged }) {
     );
   }
 
-  const { student, notes } = data;
+  const { student, notes, assessments = [] } = data;
   const fee = student.feeSummary;
   const canWrite = user.role === 'admin' || user.role === 'teacher';
   const isAdmin = user.role === 'admin';
@@ -194,6 +195,9 @@ export function StudentProfile({ user, onChanged }) {
         <TabButton on={tab === 'notes'} onClick={() => setTab('notes')}>
           {t('tabNotes')} ({notes.length})
         </TabButton>
+        <TabButton on={tab === 'assessments'} onClick={() => setTab('assessments')}>
+          {t('tabAssessments')} ({assessments.length})
+        </TabButton>
         <TabButton on={tab === 'payments'} onClick={() => setTab('payments')}>
           {t('tabPayments')}
         </TabButton>
@@ -260,6 +264,24 @@ export function StudentProfile({ user, onChanged }) {
         </div>
       )}
 
+      {tab === 'assessments' && (
+        <div className="rise">
+          <Card
+            title={t('tabAssessments')}
+            subtitle={t('assessmentsSharedHint')}
+            actions={
+              canWrite ? (
+                <Button size="sm" onClick={() => setAssessmentOpen(true)} icon={<IconPlus size={15} />}>
+                  {t('addTestResult')}
+                </Button>
+              ) : null
+            }
+          >
+            <AssessmentList assessments={assessments} onAdd={() => setAssessmentOpen(true)} canWrite={canWrite} />
+          </Card>
+        </div>
+      )}
+
       {tab === 'people' && isAdmin && (
         <div className="rise" style={{ display: 'grid', gap: 15 }}>
           <PeopleCard
@@ -284,6 +306,19 @@ export function StudentProfile({ user, onChanged }) {
         onSaved={async () => {
           setNoteOpen(false);
           toast(t('noteSaved'));
+          await load();
+          onChanged?.();
+        }}
+      />
+
+      <AssessmentModal
+        open={assessmentOpen}
+        studentId={student.id}
+        subjectDefault={user.job_title ?? ''}
+        onClose={() => setAssessmentOpen(false)}
+        onSaved={async () => {
+          setAssessmentOpen(false);
+          toast(t('assessmentSaved'));
           await load();
           onChanged?.();
         }}
@@ -406,6 +441,50 @@ function NoteList({ notes, canEdit, canWrite, onWrite, onDelete }) {
           </div>
         </article>
       ))}
+    </div>
+  );
+}
+
+function AssessmentList({ assessments, canWrite, onAdd }) {
+  const { t, lang } = useI18n();
+
+  if (assessments.length === 0) {
+    return (
+      <Empty
+        icon={<IconNote size={24} />}
+        title={t('noAssessments')}
+        sub={canWrite ? t('assessmentsSharedHint') : undefined}
+        action={canWrite ? <Button onClick={onAdd} icon={<IconPlus size={17} />}>{t('addTestResult')}</Button> : null}
+      />
+    );
+  }
+
+  return (
+    <div className="table-wrap">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>{t('subjectTaught')}</th>
+            <th>{t('testName')}</th>
+            <th>{t('testDate')}</th>
+            <th className="table__num">{t('score')}</th>
+            <th>{t('teacherLabel')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {assessments.map((assessment) => (
+            <tr key={assessment.id} style={{ cursor: 'default' }}>
+              <td>{assessment.subject}</td>
+              <td>{assessment.test_name}</td>
+              <td className="nowrap">{formatDate(assessment.test_date, lang)}</td>
+              <td className="table__num">
+                {assessment.score} / {assessment.max_score}
+              </td>
+              <td>{assessment.teacher_name}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -812,6 +891,90 @@ function NoteModal({ open, studentId, onClose, onSaved }) {
           label={t('noteShare')}
           hint={t('noteShareHint')}
         />
+      </div>
+    </Modal>
+  );
+}
+
+function AssessmentModal({ open, studentId, subjectDefault, onClose, onSaved }) {
+  const { t } = useI18n();
+  const [subject, setSubject] = useState(subjectDefault);
+  const [testName, setTestName] = useState('');
+  const [testDate, setTestDate] = useState(todayISO());
+  const [score, setScore] = useState('');
+  const [maxScore, setMaxScore] = useState('20');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setSubject(subjectDefault);
+    setTestName('');
+    setTestDate(todayISO());
+    setScore('');
+    setMaxScore('20');
+    setError('');
+  }, [open, subjectDefault]);
+
+  async function submit() {
+    if (!subject.trim() || !testName.trim() || !testDate || score === '' || maxScore === '') {
+      setError(t('fieldRequired'));
+      return;
+    }
+    if (Number(score) < 0 || Number(maxScore) <= 0 || Number(score) > Number(maxScore)) {
+      setError(`${t('score')} ≤ ${t('maxScore')}`);
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await api.createAssessment({
+        student_id: studentId,
+        subject: subject.trim(),
+        test_name: testName.trim(),
+        test_date: testDate,
+        score: Number(score),
+        max_score: Number(maxScore),
+      });
+      onSaved();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={t('addTestResult')}
+      subtitle={t('assessmentsSharedHint')}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose} type="button">{t('cancel')}</Button>
+          <Button onClick={submit} loading={busy}>{t('save')}</Button>
+        </>
+      }
+    >
+      <div className="form">
+        <Field label={t('subjectTaught')} required error={error}>
+          <input className={`input ${error ? 'input--error' : ''}`} value={subject} onChange={(e) => setSubject(e.target.value)} />
+        </Field>
+        <Field label={t('testName')} required>
+          <input className="input" value={testName} onChange={(e) => setTestName(e.target.value)} />
+        </Field>
+        <Field label={t('testDate')} required>
+          <input className="input" type="date" value={testDate} onChange={(e) => setTestDate(e.target.value)} />
+        </Field>
+        <div className="grid-2">
+          <Field label={t('score')} required>
+            <input className="input" type="number" min="0" step="0.01" value={score} onChange={(e) => setScore(e.target.value)} />
+          </Field>
+          <Field label={t('maxScore')} required>
+            <input className="input" type="number" min="0.01" step="0.01" value={maxScore} onChange={(e) => setMaxScore(e.target.value)} />
+          </Field>
+        </div>
       </div>
     </Modal>
   );

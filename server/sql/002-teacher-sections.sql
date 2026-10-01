@@ -22,3 +22,4 @@ create index if not exists teacher_sections_class_idx on teacher_sections (grade
 alter table teacher_sections enable row level security;
 
 revoke all on teacher_sections from anon, authenticated;
+grant all on teacher_sections to service_role;

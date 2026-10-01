@@ -9,6 +9,7 @@ import express from 'express';
 import { SESSION_COOKIE, parseCookies } from './auth.js';
 import { HttpError } from './http.js';
 import { authRoutes } from './routes/auth.js';
+import { assessmentRoutes } from './routes/assessments.js';
 import { metaRoutes } from './routes/meta.js';
 import { noteRoutes } from './routes/notes.js';
 import { paymentRoutes } from './routes/payments.js';
@@ -139,6 +140,7 @@ const authed = (req, res, next) =>
   req.user ? next() : res.status(401).json({ error: 'Not signed in', code: 'UNAUTHENTICATED' });
 
 app.use('/api/students', authed, studentRoutes(store));
+app.use('/api/assessments', authed, assessmentRoutes(store));
 app.use('/api/notes', authed, noteRoutes(store));
 app.use('/api/payments', authed, paymentRoutes(store));
 app.use('/api/users', authed, userRoutes(store));

@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
  */
 const UNDEFINED_TABLE = new Set(['PGRST205', '42P01']);
 let warnedAboutSections = false;
+let warnedAboutAssessments = false;
 
 /**
  * `teacher_sections` arrives with migration 002. If it has not been applied
@@ -23,6 +24,21 @@ function sectionsResult({ data, error }) {
       console.warn(
         '  warning : table "teacher_sections" is missing. Run server/sql/002-teacher-sections.sql' +
           ' in the Supabase SQL Editor. Teachers fall back to individual links until then.',
+      );
+    }
+    return [];
+  }
+  throw error;
+}
+
+function assessmentsResult({ data, error }) {
+  if (!error) return data;
+  if (UNDEFINED_TABLE.has(error.code)) {
+    if (!warnedAboutAssessments) {
+      warnedAboutAssessments = true;
+      console.warn(
+        '  warning : table "assessments" is missing. Run server/sql/003-assessments.sql' +
+          ' in the Supabase SQL Editor before using test results.',
       );
     }
     return [];
@@ -359,6 +375,35 @@ export class SupabaseStore {
   async deleteNote(id) {
     const { error } = await this.db.from('notes').delete().eq('id', id);
     if (error) throw error;
+  }
+
+  // ---------- assessments ----------
+  async listAssessments({ studentId } = {}) {
+    let q = this.db
+      .from('assessments')
+      .select('*')
+      .order('test_date', { ascending: false })
+      .order('created_at', { ascending: false });
+    if (studentId) q = q.eq('student_id', studentId);
+    const { data, error } = await q;
+    return assessmentsResult({ data, error });
+  }
+
+  async createAssessment(row) {
+    const { data, error } = await this.db
+      .from('assessments')
+      .insert(row)
+      .select()
+      .single();
+    if (error && UNDEFINED_TABLE.has(error.code)) {
+      const migrationError = new Error(
+        'Test results are not set up yet. Run server/sql/003-assessments.sql in the Supabase SQL Editor.',
+      );
+      migrationError.code = 'ASSESSMENTS_TABLE_MISSING';
+      throw migrationError;
+    }
+    if (error) throw error;
+    return data;
   }
 
   // ---------- payments ----------

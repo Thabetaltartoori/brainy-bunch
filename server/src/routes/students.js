@@ -44,9 +44,10 @@ export function studentRoutes(store) {
       const student = await store.getStudentById(id);
       if (!student) throw notFound('Student not found');
 
-      const [notes, payments, teacherLinks, guardianLinks, users] = await Promise.all([
+      const [notes, payments, assessments, teacherLinks, guardianLinks, users] = await Promise.all([
         store.listNotes({ studentId: id }),
         store.listPayments({ studentId: id }),
+        store.listAssessments({ studentId: id }),
         store.listAllTeacherStudents(),
         store.listGuardians(),
         store.listUsers({}),
@@ -74,6 +75,10 @@ export function studentRoutes(store) {
           feeSummary: summarizeFees(student, payments),
         },
         notes: visibleNotes,
+        assessments: assessments.map((assessment) => ({
+          ...assessment,
+          teacher_name: nameOf(assessment.teacher_id),
+        })),
       });
     }),
   );

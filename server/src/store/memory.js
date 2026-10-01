@@ -11,6 +11,7 @@ const byKey = (rows, key) => (v) => rows.find((r) => r[key] === v);
 export class MemoryStore {
   constructor() {
     this.db = buildSeed();
+    this.db.assessments ??= [];
     this.driver = 'memory';
   }
 
@@ -163,6 +164,7 @@ export class MemoryStore {
     this.db.teacher_students = this.db.teacher_students.filter((l) => l.student_id !== id);
     this.db.guardians = this.db.guardians.filter((l) => l.student_id !== id);
     this.db.notes = this.db.notes.filter((n) => n.student_id !== id);
+    this.db.assessments = this.db.assessments.filter((a) => a.student_id !== id);
     this.db.payments = this.db.payments.filter((p) => p.student_id !== id);
   }
 
@@ -232,6 +234,22 @@ export class MemoryStore {
     const i = this.db.notes.findIndex((n) => n.id === id);
     if (i < 0) throw new Error('Note not found');
     this.db.notes.splice(i, 1);
+  }
+
+  // ---------- assessments ----------
+  async listAssessments({ studentId } = {}) {
+    const rows = studentId
+      ? this.db.assessments.filter((a) => a.student_id === studentId)
+      : this.db.assessments;
+    return [...rows].sort(
+      (a, b) => b.test_date.localeCompare(a.test_date) || b.created_at.localeCompare(a.created_at),
+    );
+  }
+
+  async createAssessment(row) {
+    const assessment = { id: crypto.randomUUID(), created_at: now(), ...row };
+    this.db.assessments.push(assessment);
+    return assessment;
   }
 
   // ---------- payments ----------

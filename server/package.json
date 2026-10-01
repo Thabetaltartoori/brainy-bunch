@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "node --watch --watch-path=src src/index.js",
     "start": "node src/index.js",
+    "test": "node --test",
     "seed:cloud": "node src/store/seed-supabase.js",
     "doctor": "node src/doctor.js"
   },

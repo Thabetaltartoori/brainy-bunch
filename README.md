@@ -160,7 +160,7 @@ server restarts.**
 The default in-memory store is only for preview. For data that survives restarts:
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor → New query**, paste in [`server/sql/schema.sql`](server/sql/schema.sql) and run it. This creates all 8 tables and then locks them down with Row Level Security.
+2. Open **SQL Editor → New query**, paste in [`server/sql/schema.sql`](server/sql/schema.sql) and run it. This creates all 10 tables and then locks them down with Row Level Security.
 3. Go to **Project Settings → API Keys** and copy the project URL and your **secret** key (`sb_secret_...` on new projects; the long `eyJ...` `service_role` key on older ones). Take the secret key, not the publishable one.
 4. Copy `server/.env.example` to `server/.env` and fill them in:
 
@@ -204,10 +204,11 @@ This is the part that matters most in a school, so it is enforced in one place �
 | Role | Can see students | Can write notes | Can record payments | Can manage users |
 |---|---|---|---|---|
 | `admin` | all | yes | yes | yes |
-| `teacher` | students in their assigned **sections**, plus any linked in `teacher_students` | own students, own notes | no | no |
-| `parent` | only children in `guardians`, **shared notes only** | no | no | no |
+| `teacher` | students in their assigned **sections**, plus any linked in `teacher_students` | own students, own notes and test results | no | no |
+| `parent` | only children in `guardians`, **shared notes and test results** | no | no | no |
 
 A teacher who is not assigned to a student gets `403` — verified in the test script below.
+Student class/grade options include `KG1`, `KG2`, and Grades 1–6; section remains a separate field.
 
 ### Teacher sections
 
@@ -219,6 +220,15 @@ Sections need one table, created by `server/sql/002-teacher-sections.sql`. Until
 that is applied the server logs a warning and falls back to the individual
 links, so nothing breaks in the meantime.
 
+### Test results
+
+Teachers can record a test name, subject, date, score, and maximum score from a
+student's **Tests & grades** tab. Teachers can only add results for students in
+their assigned sections or individual links; parents can read results only for
+their linked children. On an existing database, run
+`server/sql/002-teacher-sections.sql` and then `server/sql/003-assessments.sql`
+in the Supabase SQL Editor before using the feature.
+
 ---
 
 ## 📁 Structure
@@ -226,7 +236,7 @@ links, so nothing breaks in the meantime.
 ```
 الروضة/            <- this folder
 ├── server/
-│   ├── sql/schema.sql          # the 8 tables, run once in Supabase
+│   ├── sql/schema.sql          # the 10 tables, run once in Supabase
 │   └── src/
 │       ├── index.js            # Express app, sessions, static hosting
 │       ├── access.js           # WHO can see WHAT — the single gate

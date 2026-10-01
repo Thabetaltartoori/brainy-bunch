@@ -426,12 +426,12 @@ function UserForm({ user, classes, sections, isAdmin, onClose, onSave, busy }) {
               <option value="admin">{t('roleAdmin')}</option>
             </select>
           </Field>
-          <Field label={t('jobTitle')}>
+          <Field label={form.role === 'teacher' ? t('subjectTaught') : t('jobTitle')}>
             <input
               className="input"
               value={form.job_title ?? ''}
               onChange={set('job_title')}
-              placeholder={form.role === 'teacher' ? t('jobTitle') : ''}
+              placeholder={form.role === 'teacher' ? t('subjectTaught') : ''}
             />
           </Field>
         </div>

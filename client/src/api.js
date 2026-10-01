@@ -131,6 +131,9 @@ export const api = {
   updateNote: (id, patch) => request('PATCH', `/api/notes/${id}`, patch),
   deleteNote: (id) => request('DELETE', `/api/notes/${id}`),
 
+  // test results
+  createAssessment: (row) => request('POST', '/api/assessments', row),
+
   // payments
   createPayment: (row) => request('POST', '/api/payments', row),
   deletePayment: (id) => request('DELETE', `/api/payments/${id}`),
