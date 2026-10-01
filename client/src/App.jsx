@@ -10,7 +10,7 @@ import {
 import { I18nProvider, useI18n } from './i18n.jsx';
 import { api } from './api.js';
 import { Shell } from './components/Shell.jsx';
-import { Button, Spinner, ToastHost } from './components/ui.jsx';
+import { Button, ErrorBoundary, Spinner, ToastHost } from './components/ui.jsx';
 import { Login } from './pages/Login.jsx';
 import { Dashboard } from './pages/Dashboard.jsx';
 import { Students } from './pages/Students.jsx';
@@ -35,6 +35,7 @@ export default function App() {
 
 function Root() {
   const { t } = useI18n();
+  const { pathname } = useLocation();
   const [user, setUser] = useState(null);
   const [booting, setBooting] = useState(true);
   const [stats, setStats] = useState(null);
@@ -101,7 +102,13 @@ function Root() {
     );
   }
 
-  if (!user) return <Login onSignedIn={setUser} />;
+  if (!user) {
+    return (
+      <ErrorBoundary title={t('crashTitle')} backLabel={t('crashBack')}>
+        <Login onSignedIn={setUser} />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <Shell
@@ -111,47 +118,55 @@ function Root() {
       onSignOut={signOut}
       title={<Title />}
     >
-      <Routes>
-        <Route path="/" element={<Dashboard stats={stats} user={user} />} />
-        {/*
-          The sign-in screen is shown whenever there is no user, whatever the
-          address bar says, so a session that lapses on any page leaves the
-          login form up in that page's place. Signing in then hands the address
-          to the router, and /login is not a page, so it fell through to the
-          404. Treat it as the front page.
-        */}
-        <Route path="/login" element={<Navigate to="/" replace />} />
-        <Route
-          path="/students"
-          element={<Students user={user} onChanged={refresh} />}
-        />
-        <Route
-          path="/students/:id"
-          element={<StudentProfile user={user} onChanged={refresh} />}
-        />
-        <Route path="/payments" element={<Payments user={user} onChanged={refresh} />} />
-        <Route path="/notes" element={<Notes user={user} onChanged={refresh} />} />
-        <Route path="/staff" element={<Staff user={user} onChanged={refresh} />} />
-        <Route
-          path="/announcements"
-          element={user.role === 'admin' ? <Announcements onChanged={refresh} /> : <Navigate to="/" replace />}
-        />
-        <Route path="/settings" element={<Settings />} />
-        <Route
-          path="*"
-          element={
-            <div className="error-page">
-              <div>
-                <div className="error-page__code">404</div>
-                <h2>{t('somethingWrong')}</h2>
-                <Button className="mt-16" onClick={() => window.location.assign('/')}>
-                  {t('dashboard')}
-                </Button>
+      {/*
+        A page that throws while rendering would otherwise unmount the entire
+        app and leave a blank white screen with no way back, which is how the
+        old paidPeriods bug presented itself. Each route gets its own boundary,
+        so only the broken page is replaced and the shell stays usable.
+      */}
+      <ErrorBoundary key={pathname} title={t('crashTitle')} backLabel={t('crashBack')}>
+        <Routes>
+          <Route path="/" element={<Dashboard stats={stats} user={user} />} />
+          {/*
+            The sign-in screen is shown whenever there is no user, whatever the
+            address bar says, so a session that lapses on any page leaves the
+            login form up in that page's place. Signing in then hands the address
+            to the router, and /login is not a page, so it fell through to the
+            404. Treat it as the front page.
+          */}
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route
+            path="/students"
+            element={<Students user={user} onChanged={refresh} />}
+          />
+          <Route
+            path="/students/:id"
+            element={<StudentProfile user={user} onChanged={refresh} />}
+          />
+          <Route path="/payments" element={<Payments user={user} onChanged={refresh} />} />
+          <Route path="/notes" element={<Notes user={user} onChanged={refresh} />} />
+          <Route path="/staff" element={<Staff user={user} onChanged={refresh} />} />
+          <Route
+            path="/announcements"
+            element={user.role === 'admin' ? <Announcements onChanged={refresh} /> : <Navigate to="/" replace />}
+          />
+          <Route path="/settings" element={<Settings />} />
+          <Route
+            path="*"
+            element={
+              <div className="error-page">
+                <div>
+                  <div className="error-page__code">404</div>
+                  <h2>{t('somethingWrong')}</h2>
+                  <Button className="mt-16" onClick={() => window.location.assign('/')}>
+                    {t('dashboard')}
+                  </Button>
+                </div>
               </div>
-            </div>
           }
         />
-      </Routes>
+        </Routes>
+      </ErrorBoundary>
     </Shell>
   );
 }

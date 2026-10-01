@@ -1,0 +1,208 @@
+@tailwind utilities;
+
+.shell,
+.main {
+	@apply bg-slate-50 text-slate-900;
+}
+
+.sidebar {
+	background-image: none;
+	@apply bg-brand-900 text-slate-100;
+}
+
+.brand__mark {
+	background-image: none;
+	@apply rounded-lg bg-coral-500 shadow-none;
+}
+
+.brand__mark::after {
+	content: none;
+}
+
+.brand__sub,
+.nav__label {
+	@apply text-emerald-300;
+}
+
+.nav__item {
+	@apply rounded-md text-slate-300;
+}
+
+.nav__item:hover {
+	@apply translate-x-0 rounded-md bg-white/10 text-white;
+}
+
+.nav__item--active {
+	@apply rounded-md bg-white/10 font-semibold text-white;
+}
+
+.nav__item--active::before {
+	@apply bg-coral-500;
+	box-shadow: none;
+}
+
+.nav__badge {
+	@apply rounded bg-coral-500;
+}
+
+.userchip {
+	@apply rounded-md bg-white/5;
+}
+
+.content {
+	max-width: none;
+	@apply px-5 py-6 md:px-8;
+}
+
+.topbar {
+	@apply border-slate-200 bg-white/95 shadow-none;
+}
+
+.ticker {
+	@apply rounded-md shadow-sm;
+}
+
+.ticker--green {
+	background-image: none;
+	@apply bg-brand-700;
+}
+
+.ticker--red {
+	background-image: none;
+	@apply bg-coral-700;
+}
+
+.btn {
+	background-image: none;
+	@apply rounded-md bg-brand-700 text-white shadow-none;
+}
+
+.btn::after {
+	content: none;
+}
+
+.btn:hover:not(:disabled) {
+	@apply translate-y-0 bg-brand-900 shadow-none;
+}
+
+.btn--ghost {
+	@apply border border-slate-200 bg-white text-slate-700;
+}
+
+.btn--ghost:hover:not(:disabled) {
+	@apply border-slate-300 bg-slate-50 text-slate-900 shadow-none;
+}
+
+.btn--soft {
+	@apply bg-brand-50 text-brand-700;
+}
+
+.btn--soft:hover:not(:disabled) {
+	@apply bg-brand-100 shadow-none;
+}
+
+.btn--danger {
+	@apply bg-coral-700 text-white;
+}
+
+.btn--danger:hover:not(:disabled) {
+	@apply bg-red-800 shadow-none;
+}
+
+.btn--danger-ghost {
+	@apply border-coral-100 bg-white text-coral-700;
+}
+
+.btn--danger-ghost:hover:not(:disabled) {
+	@apply border-coral-200 bg-coral-50 shadow-none;
+}
+
+.card,
+.stat {
+	@apply rounded-lg border-slate-200 bg-white shadow-panel;
+}
+
+.card--hover:hover,
+.stat:hover {
+	@apply translate-y-0 border-slate-300 shadow-panel;
+}
+
+.card__head {
+	@apply border-slate-100;
+}
+
+.stat::before {
+	content: none;
+}
+
+.stat__icon {
+	@apply rounded-md bg-brand-50 text-brand-700;
+}
+
+.stat__icon--red {
+	@apply bg-coral-50 text-coral-700;
+}
+
+.stat__value--red {
+	@apply text-coral-700;
+}
+
+.stat__bar {
+	@apply bg-slate-100;
+}
+
+.stat__bar i {
+	background-image: none;
+	@apply bg-brand-500;
+}
+
+.stat__bar i.is-red {
+	background-image: none;
+	@apply bg-coral-500;
+}
+
+.badge {
+	@apply rounded bg-slate-100 text-slate-700;
+}
+
+.input,
+.select,
+.textarea,
+.check {
+	@apply rounded-md border-slate-300 bg-white;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+	@apply border-brand-500;
+	box-shadow: 0 0 0 3px rgb(50 135 107 / 14%);
+}
+
+@media (max-width: 640px) {
+	.content {
+		@apply px-4 py-5;
+	}
+}
+
+.main {
+	background-color: #f6f8f5;
+	background-image:
+		linear-gradient(145deg, rgb(50 135 107 / 4%), transparent 45%),
+		repeating-linear-gradient(0deg, transparent 0 30px, rgb(23 60 51 / 4%) 31px, transparent 32px),
+		repeating-linear-gradient(90deg, transparent 0 30px, rgb(23 60 51 / 4%) 31px, transparent 32px);
+	background-size: 100% 100%, 32px 32px, 32px 32px;
+	animation: school-grid-drift 48s linear infinite;
+}
+
+@keyframes school-grid-drift {
+	to {
+		background-position: 0 0, 32px 32px, 32px 32px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.main {
+		animation: none;
+	}
+}

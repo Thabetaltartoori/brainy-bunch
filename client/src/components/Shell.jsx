@@ -211,7 +211,7 @@ export function Shell({ user, stats, announcements, title, subtitle, onSignOut, 
   useEffect(() => setDrawer(false), [location.pathname]);
 
   return (
-    <div className="shell">
+    <div className="shell min-h-screen bg-slate-50 text-slate-900">
       {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
       <Sidebar

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Component, useEffect, useRef, useState } from 'react';
 
 import { useI18n } from '../i18n.jsx';
 import { initials, toneFor } from '../format.js';
@@ -385,4 +385,60 @@ export function Notice({ children, tone = 'info' }) {
       <span>{children}</span>
     </div>
   );
+}
+
+/* =========================================================
+   Error boundary
+   ========================================================= */
+
+/**
+ * Catches a throw during render and shows it instead of a blank page.
+ *
+ * Without this, one bad value anywhere in a page unmounts the whole tree and
+ * leaves a white screen: there is no way back and nothing on screen to say
+ * what went wrong. The message is shown verbatim because "something went
+ * wrong" on its own tells nobody which value was wrong.
+ */
+export class ErrorBoundary extends Component {
+  state = { error: null };
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error('Page crashed while rendering:', error, info?.componentStack);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="error-page">
+        <div>
+          <div className="error-page__code">!</div>
+          <h2>{this.props.title ?? 'This page could not be shown'}</h2>
+          <pre
+            style={{
+              textAlign: 'start',
+              whiteSpace: 'pre-wrap',
+              margin: '16px 0 0',
+              fontSize: 12,
+              opacity: 0.75,
+            }}
+          >
+            {String(this.state.error?.message ?? this.state.error)}
+          </pre>
+          <Button
+            className="mt-16"
+            onClick={() => {
+              this.setState({ error: null });
+              window.location.assign('/');
+            }}
+          >
+            {this.props.backLabel ?? 'Back to the dashboard'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 }
