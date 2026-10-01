@@ -43,6 +43,22 @@ const ROOT = path.resolve(HERE, '..', '..');
 const PORT = Number(process.env.PORT) || 4100;
 const CLIENT_DIST = path.join(ROOT, 'client', 'dist');
 
+/**
+ * True under Cloudflare Workers.
+ *
+ * Workers has no filesystem, so the built client is uploaded as static assets
+ * and answered by Cloudflare's own asset router (see the [assets] block in
+ * wrangler.toml) rather than by express.static here. It also has no port to
+ * bind: worker/index.js passes the app to httpServerHandler instead of this
+ * file listening for itself.
+ *
+ * The test is the runtime's own user agent, which is the documented way to tell
+ * the Workers runtime from Node. A plain `globalThis.navigator` check is not
+ * usable here: modern Node has a navigator global too, so it would report true
+ * on your machine and silently stop serving client/dist during local testing.
+ */
+const ON_CLOUDFLARE = globalThis.navigator?.userAgent === 'Cloudflare-Workers';
+
 /** Supabase when configured, otherwise an in-memory store for local preview. */
 function createStore() {
   const url = process.env.SUPABASE_URL;
@@ -128,7 +144,11 @@ app.use('/api/payments', authed, paymentRoutes(store));
 app.use('/api/users', authed, userRoutes(store));
 
 // ---- serve the built React app ----
-if (fs.existsSync(CLIENT_DIST)) {
+// Skipped on Workers: there is no filesystem to read client/dist from, and the
+// asset router in wrangler.toml has already answered the request. The catch-all
+// below is included in that skip for the same reason - on Workers, index.html
+// comes from the SPA fallback in the asset router.
+if (!ON_CLOUDFLARE && fs.existsSync(CLIENT_DIST)) {
   app.use(
     express.static(CLIENT_DIST, {
       /**
@@ -175,7 +195,11 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Something went wrong on the server', code: 'INTERNAL' });
 });
 
-if (process.env.NETLIFY !== 'true') {
+// Under a Netlify function or on Workers there is no port to bind, and calling
+// listen() there would stop the instance ever responding: worker/index.js hands
+// the app to httpServerHandler, and the Netlify function wraps it in
+// serverless-http. Both are driven by the request, not by this file.
+if (!ON_CLOUDFLARE && process.env.NETLIFY !== 'true') {
   app.listen(PORT, () => {
     console.log(`\n  Brainy Bunch server  ->  http://localhost:${PORT}`);
     console.log(`  driver: ${store.driver}\n`);

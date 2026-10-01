@@ -9,6 +9,8 @@
   "scripts": {
     "build": "npm --prefix server ci --omit=dev --ignore-scripts && npm --prefix client ci --ignore-scripts && npm --prefix client run build",
     "start": "node server/src/index.js",
-    "doctor": "npm --prefix server run doctor"
+    "doctor": "npm --prefix server run doctor",
+    "cf:dev": "npm run build && npx wrangler dev",
+    "cf:deploy": "npm run build && npx wrangler deploy"
   }
 }

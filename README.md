@@ -92,6 +92,54 @@ roughly 30 seconds while the service wakes.
 
 ---
 
+## 🌐 Deploying to Cloudflare Workers
+
+`wrangler.toml` is a ready configuration. The Express app runs on the Workers
+runtime through `node:http`'s `httpServerHandler` (see `worker/index.js`), and the
+React build is uploaded as **static assets** rather than served by
+`express.static` — Workers has no filesystem to read it from.
+
+That split is why the login screen used to report "Cannot reach the server":
+without `worker/index.js` there was no request handler at all, so every
+`/api/*` call died before it reached Express. A failed `fetch()` is what the
+client reports as `OFFLINE`, which reads like a network fault but is really a
+missing handler.
+
+1. Build and deploy:
+
+   ```bash
+   npm run cf:deploy
+   ```
+
+2. Set the two Supabase values as secrets — **not** in `wrangler.toml`:
+
+   ```bash
+   npx wrangler secret put SUPABASE_URL
+   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+   ```
+
+   Deploy again so the Worker picks them up. The startup log must say
+   `storage : Supabase (Postgres)`; `in-memory demo` means the app is running on
+   throwaway data.
+
+3. Confirm it works: `https://brainy-bunch.<your-subdomain>.workers.dev/health`
+   should return `{"ok":true,...}`.
+
+### Attaching a custom domain
+
+1. Add the domain to Cloudflare and point its nameservers at Cloudflare.
+2. Worker → **Settings** → **Domains & Routes** → **Add** → **Custom domain**.
+3. Add the same hostname to `wrangler.toml` under `[[routes]]` with
+   `custom_domain = true`, so a later deploy does not drop it.
+
+### With Workers Builds (Git-connected deploys)
+
+Set **Build command** to `npm run build` and **Deploy command** to
+`npx wrangler deploy`. The build must run first because `client/dist` is
+gitignored, and the deploy uploads it as the assets directory.
+
+---
+
 ## 🔑 Demo accounts
 
 The in-memory demo store creates these automatically. **Demo data resets whenever the

@@ -1,0 +1,55 @@
+# Cloudflare Workers deploy for Brainy Bunch.
+#
+# The API is an Express app, so it runs on the Workers runtime through
+# node:http's httpServerHandler (see worker/index.js). The React build is
+# uploaded as static assets rather than served by Express, because Workers has
+# no filesystem for express.static to read from.
+#
+# The two Supabase values are NOT in this file. Set them with
+#   npx wrangler secret put SUPABASE_URL
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# (or in the Worker's environment settings in the dashboard), never here.
+# SUPABASE_SERVICE_ROLE_KEY bypasses row level security, so it must only ever
+# live in the Worker's environment.
+#
+# To attach a custom domain, add it under the worker's routes in the dashboard
+# (Settings > Domains & Routes > Add > Custom Domain) and add the matching
+# pattern here so the next deploy does not drop it:
+#
+# [[routes]]
+# pattern = "app.yourdomain.com"
+# custom_domain = true
+
+name = "brainy-bunch"
+main = "worker/index.js"
+compatibility_date = "2026-10-01"
+
+# nodejs_compat gives the Worker node:fs, node:path and node:crypto. Express and
+# the scrypt password hashing both need them.
+#
+# enable_nodejs_http_server_modules is what makes httpServerHandler work: it is a
+# node:http *server*-side API, and without this flag the Worker runtime rejects
+# it. It is implied by compatibility_date 2025-09-01 or later, but it is listed
+# explicitly so the requirement is not lost if the date is ever lowered.
+compatibility_flags = ["nodejs_compat", "enable_nodejs_http_server_modules"]
+
+[assets]
+# The built React app.
+directory = "./client/dist"
+binding = "ASSETS"
+
+# Every client-side route (/students, /payments, ...) has no matching file on
+# disk and must be answered with index.html instead of a 404.
+not_found_handling = "single-page-application"
+
+# /api/* and /health are served by Express in worker/index.js, so the Worker
+# script has to run before the asset router gets a chance to answer them. Every
+# other path stays asset-first.
+run_worker_first = ["/api/*", "/health"]
+
+[vars]
+NODE_ENV = "production"
+# Where the startup log prints the API URL. Not a real port: on Workers the
+# value is a routing key for httpServerHandler, which is why the server entry
+# point never calls app.listen() under Cloudflare.
+PORT = "4100"
