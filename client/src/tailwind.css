@@ -50,7 +50,8 @@
 }
 
 .content {
-	max-width: none;
+	max-width: 1480px;
+	margin-inline: auto;
 	@apply px-5 py-6 md:px-8;
 }
 
@@ -119,16 +120,32 @@
 
 .card,
 .stat {
-	@apply rounded-lg border-slate-200 bg-white shadow-panel;
+	@apply rounded-lg border-slate-200 bg-white;
+	box-shadow: 0 1px 2px rgb(23 60 51 / 5%), 0 6px 20px rgb(23 60 51 / 4%);
 }
 
 .card--hover:hover,
 .stat:hover {
-	@apply translate-y-0 border-slate-300 shadow-panel;
+	@apply translate-y-0 border-brand-100;
+	box-shadow: 0 2px 4px rgb(23 60 51 / 6%), 0 10px 26px rgb(23 60 51 / 7%);
 }
 
 .card__head {
 	@apply border-slate-100;
+}
+
+.card__head h3 {
+	@apply font-semibold text-slate-800;
+}
+
+.section__head h2 {
+	@apply text-brand-900;
+	font-size: 21px;
+	letter-spacing: 0;
+}
+
+.section__head p {
+	@apply mt-1 text-slate-500;
 }
 
 .stat::before {
@@ -163,6 +180,32 @@
 
 .badge {
 	@apply rounded bg-slate-100 text-slate-700;
+}
+
+.table-wrap {
+	@apply rounded-lg;
+}
+
+.table th {
+	@apply bg-brand-50 text-slate-600;
+	letter-spacing: 0;
+}
+
+.table td {
+	border-bottom-color: rgb(226 232 240 / 75%);
+}
+
+.table tbody tr:hover,
+.table tbody tr:focus-within {
+	@apply bg-brand-50;
+}
+
+.table__num {
+	@apply text-slate-700;
+}
+
+.search .input {
+	@apply border-slate-200;
 }
 
 .input,
